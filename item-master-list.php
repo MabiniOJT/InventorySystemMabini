@@ -10,6 +10,119 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 // Initialize session arrays
 if (!isset($_SESSION['items'])) $_SESSION['items'] = [];
 
+// Load sample data if requested
+if (isset($_GET['load_sample_data']) && empty($_SESSION['items'])) {
+    $sampleData = [
+        ['item_code' => 'ITEM-003', 'qty' => 55, 'unit' => 'bottle', 'description' => 'Alcohol, Isopropyl 70%, 500 ml', 'unit_price' => 114.00],
+        ['item_code' => 'ITEM-004', 'qty' => 119, 'unit' => 'piece', 'description' => 'Ballpen (Black) 0.7 TIP', 'unit_price' => 7.50],
+        ['item_code' => 'ITEM-005', 'qty' => 6, 'unit' => 'piece', 'description' => 'Ballpen (Blue) 0.7 TIP', 'unit_price' => 7.50],
+        ['item_code' => 'ITEM-006', 'qty' => 174, 'unit' => 'piece', 'description' => 'Ballpen Black 0.5', 'unit_price' => 7.50],
+        ['item_code' => 'ITEM-007', 'qty' => 30, 'unit' => 'piece', 'description' => 'Ballpen Blue 0.5', 'unit_price' => 7.50],
+        ['item_code' => 'ITEM-008', 'qty' => 10, 'unit' => 'piece', 'description' => 'Ballpen Red 0.5', 'unit_price' => 7.50],
+        ['item_code' => 'ITEM-009', 'qty' => 19, 'unit' => 'pack', 'description' => 'Battery, Dry Cell size AA, 4/pack', 'unit_price' => 94.00],
+        ['item_code' => 'ITEM-010', 'qty' => 7, 'unit' => 'pack', 'description' => 'Battery, Dry Cell size AAA 4/pack', 'unit_price' => 128.00],
+        ['item_code' => 'ITEM-011', 'qty' => 32, 'unit' => 'box', 'description' => 'Binder Clip Fold Back Clip 25mm', 'unit_price' => 26.00],
+        ['item_code' => 'ITEM-013', 'qty' => 9, 'unit' => 'piece', 'description' => 'Broom, Soft (Walis Tambo)', 'unit_price' => 148.00],
+        ['item_code' => 'ITEM-014', 'qty' => 4, 'unit' => 'piece', 'description' => 'Broom, (Walis Tingting)', 'unit_price' => 56.00],
+        ['item_code' => 'ITEM-015', 'qty' => 55, 'unit' => 'piece', 'description' => 'Brown Envelope Short', 'unit_price' => 3.50],
+        ['item_code' => 'ITEM-016', 'qty' => 190, 'unit' => 'piece', 'description' => 'Brown Envelope Legal', 'unit_price' => 4.50],
+        ['item_code' => 'ITEM-017', 'qty' => 100, 'unit' => 'piece', 'description' => 'Brown Envelope A4', 'unit_price' => 3.00],
+        ['item_code' => 'ITEM-018', 'qty' => 4, 'unit' => 'unit', 'description' => 'Calculator 2-way power 12 digits', 'unit_price' => 568.00],
+        ['item_code' => 'ITEM-019', 'qty' => 1, 'unit' => 'pack', 'description' => 'Carbon Paper Blue legal, 100/pack', 'unit_price' => 934.00],
+        ['item_code' => 'ITEM-021', 'qty' => 15, 'unit' => 'bottle', 'description' => 'Dishwashing Liquid 475ml', 'unit_price' => 178.00],
+        ['item_code' => 'ITEM-023', 'qty' => 4, 'unit' => 'roll', 'description' => 'Double Sided Tape 24mmx10m', 'unit_price' => 40.00],
+        ['item_code' => 'ITEM-024', 'qty' => 1, 'unit' => 'piece', 'description' => 'Dustpan, plastic', 'unit_price' => 93.00],
+        ['item_code' => 'ITEM-025', 'qty' => 1, 'unit' => 'box', 'description' => 'Envelope Business (white short)', 'unit_price' => 226.00],
+        ['item_code' => 'ITEM-026', 'qty' => 3, 'unit' => 'box', 'description' => 'Envelope Business (white long)', 'unit_price' => 369.00],
+        ['item_code' => 'ITEM-027', 'qty' => 50, 'unit' => 'piece', 'description' => 'Expandable Brown Envelope Legal', 'unit_price' => 24.00],
+        ['item_code' => 'ITEM-028', 'qty' => 30, 'unit' => 'piece', 'description' => 'Expandable Plastic Envelope w/ Handle (Long)', 'unit_price' => 87.00],
+        ['item_code' => 'ITEM-029', 'qty' => 400, 'unit' => 'piece', 'description' => 'Folder A4 White 14 pts', 'unit_price' => 7.00],
+        ['item_code' => 'ITEM-030', 'qty' => 400, 'unit' => 'piece', 'description' => 'Folder Legal, white 14pts', 'unit_price' => 7.00],
+        ['item_code' => 'ITEM-031', 'qty' => 200, 'unit' => 'piece', 'description' => 'Folder Letter, white 14pts', 'unit_price' => 6.00],
+        ['item_code' => 'ITEM-032', 'qty' => 300, 'unit' => 'piece', 'description' => 'Folder long Brown (thick)', 'unit_price' => 7.00],
+        ['item_code' => 'ITEM-033', 'qty' => 26, 'unit' => 'pack', 'description' => 'Garbage Bag XXL Black', 'unit_price' => 56.00],
+        ['item_code' => 'ITEM-034', 'qty' => 16, 'unit' => 'pack', 'description' => 'Glossy Photo Sticker A4 130gsm 5 sheets/pack', 'unit_price' => 43.00],
+        ['item_code' => 'ITEM-036', 'qty' => 5, 'unit' => 'bottle', 'description' => 'Glue, multipurpose 130 grams', 'unit_price' => 60.00],
+        ['item_code' => 'ITEM-037', 'qty' => 1, 'unit' => 'bottle', 'description' => 'Ink, for Stamp pad, 30ml purple', 'unit_price' => 18.00],
+        ['item_code' => 'ITEM-039', 'qty' => 30, 'unit' => 'piece', 'description' => 'Lead Pencil medium size', 'unit_price' => 8.00],
+        ['item_code' => 'ITEM-040', 'qty' => 9, 'unit' => 'piece', 'description' => 'Marker White Board black', 'unit_price' => 27.00],
+        ['item_code' => 'ITEM-041', 'qty' => 6, 'unit' => 'piece', 'description' => 'Marker, permanent black, broad', 'unit_price' => 41.00],
+        ['item_code' => 'ITEM-042', 'qty' => 8, 'unit' => 'piece', 'description' => 'Marker, permanent black, fine', 'unit_price' => 41.00],
+        ['item_code' => 'ITEM-043', 'qty' => 4, 'unit' => 'piece', 'description' => 'Mophead, Rayon 500g', 'unit_price' => 243.00],
+        ['item_code' => 'ITEM-044', 'qty' => 10, 'unit' => 'can', 'description' => 'Multi Insect Killer Odorless 500ml', 'unit_price' => 518.00],
+        ['item_code' => 'ITEM-045', 'qty' => 8, 'unit' => 'roll', 'description' => 'Packaging Tape (Brown) 48mmx50mm', 'unit_price' => 50.00],
+        ['item_code' => 'ITEM-046', 'qty' => 11, 'unit' => 'box', 'description' => 'Paper fastener plastic', 'unit_price' => 42.00],
+        ['item_code' => 'ITEM-051', 'qty' => 57, 'unit' => 'ream', 'description' => 'Paper, Multipurpose, A4 70gsm', 'unit_price' => 210.00],
+        ['item_code' => 'ITEM-052', 'qty' => 65, 'unit' => 'ream', 'description' => 'Paper, Multipurpose, Legal 70gsm', 'unit_price' => 232.00],
+        ['item_code' => 'ITEM-053', 'qty' => 11, 'unit' => 'ream', 'description' => 'Paper, Multipurpose, Letter 70gsm', 'unit_price' => 199.00],
+        ['item_code' => 'ITEM-054', 'qty' => 6, 'unit' => 'piece', 'description' => 'Pastel Highlighter, Creamy Peach', 'unit_price' => 48.00],
+        ['item_code' => 'ITEM-055', 'qty' => 7, 'unit' => 'piece', 'description' => 'Pastel Highlighter, Milky Yellow', 'unit_price' => 48.00],
+        ['item_code' => 'ITEM-056', 'qty' => 4, 'unit' => 'piece', 'description' => 'Pastel Highlighter, Cloudy Blue', 'unit_price' => 48.00],
+        ['item_code' => 'ITEM-057', 'qty' => 2, 'unit' => 'piece', 'description' => 'Pastel Highlighter, Pink Blush', 'unit_price' => 104.00],
+        ['item_code' => 'ITEM-058', 'qty' => 4, 'unit' => 'pack', 'description' => 'Photo Paper A4 (210x297mm) 180gsm 20 Sheets', 'unit_price' => 36.00],
+        ['item_code' => 'ITEM-059', 'qty' => 3, 'unit' => 'box', 'description' => 'Push pin, colored 100s/box', 'unit_price' => 92.00],
+        ['item_code' => 'ITEM-060', 'qty' => 20, 'unit' => 'book', 'description' => 'Record book 170mm x 280mm 300 Pages', 'unit_price' => 123.00],
+        ['item_code' => 'ITEM-061', 'qty' => 8, 'unit' => 'book', 'description' => 'Record Book 500 pages 177mm x 280mm', 'unit_price' => 232.00],
+        ['item_code' => 'ITEM-062', 'qty' => 8, 'unit' => 'box', 'description' => 'Rubber band, 225 grams flat', 'unit_price' => 109.00],
+        ['item_code' => 'ITEM-063', 'qty' => 5, 'unit' => 'piece', 'description' => 'Sign Pen 0.5 Black', 'unit_price' => 109.00],
+        ['item_code' => 'ITEM-064', 'qty' => 114, 'unit' => 'piece', 'description' => 'Sign Pen 0.5 Blue', 'unit_price' => 34.00],
+        ['item_code' => 'ITEM-065', 'qty' => 7, 'unit' => 'piece', 'description' => 'Stamp Pad (small)', 'unit_price' => 555.00],
+        ['item_code' => 'ITEM-067', 'qty' => 2, 'unit' => 'box', 'description' => 'Stapler Heavy Duty with remover', 'unit_price' => 12.00],
+        ['item_code' => 'ITEM-068', 'qty' => 4, 'unit' => 'box', 'description' => 'Staple Wire #10-1M', 'unit_price' => 67.00],
+        ['item_code' => 'ITEM-069', 'qty' => 19, 'unit' => 'box', 'description' => 'Staple Wire #35-5M', 'unit_price' => 45.00],
+        ['item_code' => 'ITEM-070', 'qty' => 2, 'unit' => 'box', 'description' => 'Staple Wire #23/10', 'unit_price' => 79.00],
+        ['item_code' => 'ITEM-071', 'qty' => 1, 'unit' => 'box', 'description' => 'Staple Wire #23/23', 'unit_price' => 39.00],
+        ['item_code' => 'ITEM-072', 'qty' => 20, 'unit' => 'pad', 'description' => 'Sticky Notes 3"x5"', 'unit_price' => 53.00],
+        ['item_code' => 'ITEM-073', 'qty' => 12, 'unit' => 'roll', 'description' => 'Tape, Masking 24mmx25y', 'unit_price' => 31.00],
+        ['item_code' => 'ITEM-074', 'qty' => 24, 'unit' => 'roll', 'description' => 'Tape, transparent 24mmx50m', 'unit_price' => 50.00],
+        ['item_code' => 'ITEM-075', 'qty' => 16, 'unit' => 'roll', 'description' => 'Tape, Transparent 48mmx50y', 'unit_price' => 256.00],
+        ['item_code' => 'ITEM-077', 'qty' => 30, 'unit' => 'pack', 'description' => 'Toilet Tissue Paper, 2-ply 12 rolls/pack', 'unit_price' => 84.00],
+        ['item_code' => 'ITEM-078', 'qty' => 8, 'unit' => 'piece', 'description' => 'Unipin Sign Pen 0.8 Black', 'unit_price' => 84.00],
+        ['item_code' => 'ITEM-079', 'qty' => 14, 'unit' => 'box', 'description' => 'Vinyl Paper Clip big', 'unit_price' => 35.00],
+    ];
+    
+    // Categorize items automatically
+    function categorizeItem($description) {
+        $desc = strtolower($description);
+        if (strpos($desc, 'paper') !== false || strpos($desc, 'folder') !== false || strpos($desc, 'envelope') !== false) {
+            return 'Office Supplies';
+        } elseif (strpos($desc, 'pen') !== false || strpos($desc, 'pencil') !== false || strpos($desc, 'marker') !== false || strpos($desc, 'highlighter') !== false) {
+            return 'Writing Instruments';
+        } elseif (strpos($desc, 'tape') !== false || strpos($desc, 'glue') !== false || strpos($desc, 'clip') !== false || strpos($desc, 'stapler') !== false || strpos($desc, 'staple') !== false) {
+            return 'Fastening & Adhesives';
+        } elseif (strpos($desc, 'broom') !== false || strpos($desc, 'mop') !== false || strpos($desc, 'dustpan') !== false || strpos($desc, 'garbage') !== false || strpos($desc, 'tissue') !== false || strpos($desc, 'dishwashing') !== false) {
+            return 'Cleaning Supplies';
+        } elseif (strpos($desc, 'battery') !== false || strpos($desc, 'calculator') !== false) {
+            return 'Electronics';
+        } else {
+            return 'General Supplies';
+        }
+    }
+    
+    $itemId = 1;
+    foreach ($sampleData as $data) {
+        $_SESSION['items'][] = [
+            'id' => $itemId++,
+            'item_code' => $data['item_code'],
+            'item_name' => $data['description'],
+            'description' => '',
+            'category' => categorizeItem($data['description']),
+            'unit' => $data['unit'],
+            'unit_cost' => $data['unit_price'],
+            'quantity_on_hand' => $data['qty'],
+            'reorder_level' => 10,
+            'supplier' => '',
+            'location' => '',
+            'status' => 'Active',
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+    }
+    
+    $_SESSION['success_message'] = 'Successfully loaded ' . count($sampleData) . ' sample items!';
+    header('Location: item-master-list.php');
+    exit;
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -222,6 +335,11 @@ foreach ($items as $item) {
                 <div class="section-header">
                     <h2>Item Master List</h2>
                     <div>
+                        <?php if (empty($items)): ?>
+                            <a href="?load_sample_data=1" style="text-decoration: none;">
+                                <button class="btn-primary" style="background: #FF9800;">📋 Load Sample Data</button>
+                            </a>
+                        <?php endif; ?>
                         <button class="btn-primary" onclick="showModal('itemModal')">+ Add Item</button>
                         <button class="btn-primary" onclick="showModal('uploadModal')" style="margin-left: 10px;">📤 Upload Excel</button>
                     </div>
@@ -261,9 +379,11 @@ foreach ($items as $item) {
                     <select id="filterCategory">
                         <option value="">All Categories</option>
                         <option value="Office Supplies">Office Supplies</option>
+                        <option value="Writing Instruments">Writing Instruments</option>
+                        <option value="Fastening & Adhesives">Fastening & Adhesives</option>
+                        <option value="Cleaning Supplies">Cleaning Supplies</option>
                         <option value="Electronics">Electronics</option>
-                        <option value="Furniture">Furniture</option>
-                        <option value="Equipment">Equipment</option>
+                        <option value="General Supplies">General Supplies</option>
                     </select>
                     <select id="filterStatus">
                         <option value="">All Status</option>
@@ -354,21 +474,27 @@ foreach ($items as $item) {
                         <select name="category" required>
                             <option value="">Select Category</option>
                             <option value="Office Supplies">Office Supplies</option>
+                            <option value="Writing Instruments">Writing Instruments</option>
+                            <option value="Fastening & Adhesives">Fastening & Adhesives</option>
+                            <option value="Cleaning Supplies">Cleaning Supplies</option>
                             <option value="Electronics">Electronics</option>
-                            <option value="Furniture">Furniture</option>
-                            <option value="Equipment">Equipment</option>
-                            <option value="Consumables">Consumables</option>
+                            <option value="General Supplies">General Supplies</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Unit *</label>
                         <select name="unit" required>
-                            <option value="pcs">Pieces (pcs)</option>
+                            <option value="piece">Piece</option>
                             <option value="box">Box</option>
-                            <option value="set">Set</option>
-                            <option value="ream">Ream</option>
                             <option value="pack">Pack</option>
+                            <option value="bottle">Bottle</option>
+                            <option value="ream">Ream</option>
+                            <option value="roll">Roll</option>
+                            <option value="pad">Pad</option>
+                            <option value="book">Book</option>
+                            <option value="can">Can</option>
                             <option value="unit">Unit</option>
+                            <option value="set">Set</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -433,16 +559,38 @@ foreach ($items as $item) {
             }
         }
         
-        // Search functionality
-        document.getElementById('searchItem').addEventListener('keyup', function() {
-            const searchTerm = this.value.toLowerCase();
+        // Filter function
+        function filterTable() {
+            const searchTerm = document.getElementById('searchItem').value.toLowerCase();
+            const categoryFilter = document.getElementById('filterCategory').value.toLowerCase();
+            const statusFilter = document.getElementById('filterStatus').value.toLowerCase();
             const rows = document.querySelectorAll('tbody tr');
             
             rows.forEach(row => {
+                // Skip empty state row
+                if (row.cells.length === 1) return;
+                
                 const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
+                const category = row.cells[3].textContent.toLowerCase(); // Category column (index 3)
+                
+                // Check all filters
+                const matchesSearch = text.includes(searchTerm);
+                const matchesCategory = !categoryFilter || category.includes(categoryFilter);
+                const matchesStatus = true; // All items are active in session storage
+                
+                // Show row only if it matches all filters
+                row.style.display = (matchesSearch && matchesCategory && matchesStatus) ? '' : 'none';
             });
-        });
+        }
+        
+        // Search functionality
+        document.getElementById('searchItem').addEventListener('keyup', filterTable);
+        
+        // Category filter
+        document.getElementById('filterCategory').addEventListener('change', filterTable);
+        
+        // Status filter
+        document.getElementById('filterStatus').addEventListener('change', filterTable);
     </script>
 </body>
 </html>
