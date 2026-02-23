@@ -64,6 +64,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['success_message'] = 'Office added successfully!';
         header('Location: offices.php');
         exit;
+    } elseif ($action === 'edit_office') {
+        $id = $_POST['id'] ?? 0;
+        $new_name = trim($_POST['office_name'] ?? '');
+        if (!empty($new_name)) {
+            foreach ($_SESSION['offices'] as $key => $office) {
+                if ($office['id'] == $id) {
+                    $_SESSION['offices'][$key]['office_name'] = $new_name;
+                    break;
+                }
+            }
+        }
+        $_SESSION['success_message'] = 'Office updated successfully!';
+        header('Location: offices.php');
+        exit;
     } elseif ($action === 'delete_office') {
         $id = $_POST['id'] ?? 0;
         foreach ($_SESSION['offices'] as $key => $office) {
@@ -122,15 +136,8 @@ $offices = $_SESSION['offices'];
                                     <div class="dropdown-item empty">No offices found</div>
                                 <?php else: ?>
                                     <?php foreach ($offices as $index => $office): ?>
-                                        <div class="dropdown-item-container" data-office-name="<?php echo strtolower(htmlspecialchars($office['office_name'])); ?>">
-                                            <div class="dropdown-item" onclick="showOfficeDetails(<?php echo $index; ?>)">
-                                                <?php echo htmlspecialchars($office['office_name']); ?>
-                                            </div>
-                                            <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this office?');">
-                                                <input type="hidden" name="action" value="delete_office">
-                                                <input type="hidden" name="id" value="<?php echo $office['id']; ?>">
-                                                <button type="submit" class="delete-btn" title="Delete Office">×</button>
-                                            </form>
+                                        <div class="dropdown-item" data-office-name="<?php echo strtolower(htmlspecialchars($office['office_name'])); ?>" onclick="showOfficeDetails(<?php echo $index; ?>)">
+                                            <?php echo htmlspecialchars($office['office_name']); ?>
                                         </div>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -178,6 +185,83 @@ $offices = $_SESSION['offices'];
             document.getElementById(modalId).classList.remove('show');
         }
         
+        function toggleEditMode() {
+            editMode = !editMode;
+            const editBtn = document.getElementById('editModeBtn');
+            const normalView = document.getElementById('normalView');
+            const editView = document.getElementById('editView');
+            
+            if (editMode) {
+                editBtn.textContent = '✓ Done';
+                editBtn.classList.add('active');
+                normalView.style.display = 'none';
+                editView.style.display = 'block';
+                // Auto-open the dropdown
+                setTimeout(() => {
+                    const selectElement = document.getElementById('editOfficeSelect');
+                    if (selectElement) {
+                        selectElement.focus();
+                        selectElement.click();
+                        // For some browsers, we need to trigger it differently
+                        const event = new MouseEvent('mousedown', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                        });
+                        selectElement.dispatchEvent(event);
+                    }
+                }, 100);
+            } else {
+                editBtn.textContent = '✏️ Edit';
+                editBtn.classList.remove('active');
+                normalView.style.display = 'block';
+                editView.style.display = 'none';
+            }
+        }
+        
+        function editOffice(officeName, officeId) {
+            document.getElementById('edit_office_id').value = officeId;
+            document.getElementById('edit_office_name').value = officeName;
+            showModal('editOfficeModal');
+        }
+        
+        function handleEditSelect(selectElement) {
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+            if (selectedOption.value) {
+                const officeId = selectedOption.value;
+                const officeName = selectedOption.getAttribute('data-name');
+                editOffice(officeName, officeId);
+                // Reset dropdown
+                selectElement.selectedIndex = 0;
+            }
+        }
+        
+        function handleOfficeClick(index, officeName, officeId) {
+            if (editMode) {
+                // In edit mode, open edit modal
+                document.getElementById('edit_office_id').value = officeId;
+                document.getElementById('edit_office_name').value = officeName;
+                showModal('editOfficeModal');
+            } else {
+                // In normal mode, show office details
+                showOfficeDetails(index);
+            }
+        }
+        
+        function deleteOfficeFromModal() {
+            const officeId = document.getElementById('edit_office_id').value;
+            if (confirm('Are you sure you want to delete this office?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="delete_office">
+                    <input type="hidden" name="id" value="${officeId}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
         function toggleDropdown() {
             document.getElementById('officesDropdown').classList.toggle('show');
         }
@@ -186,15 +270,17 @@ $offices = $_SESSION['offices'];
             const searchInput = document.getElementById('officeSearch');
             const filter = searchInput.value.toLowerCase();
             const dropdown = document.getElementById('officesDropdown');
-            const items = dropdown.getElementsByClassName('dropdown-item-container');
+            const items = dropdown.getElementsByClassName('dropdown-item');
             
             let visibleCount = 0;
             
             for (let i = 0; i < items.length; i++) {
                 const officeName = items[i].getAttribute('data-office-name');
                 if (officeName && officeName.includes(filter)) {
-                    items[i].style.display = 'flex';
+                    items[i].style.display = 'block';
                     visibleCount++;
+                } else if (items[i].classList.contains('empty')) {
+                    items[i].style.display = 'block';
                 } else {
                     items[i].style.display = 'none';
                 }
@@ -243,6 +329,102 @@ $offices = $_SESSION['offices'];
     </script>
     
     <style>
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-secondary {
+            padding: 10px 20px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #d32f2f;
+        }
+        
+        .btn-secondary.active {
+            background-color: #4CAF50;
+        }
+        
+        .btn-danger {
+            padding: 10px 20px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .modal-buttons button {
+            flex: 1;
+        }
+        
+        .edit-view-container {
+            margin-top: 20px;
+        }
+        
+        .edit-view-container h3 {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .edit-dropdown {
+            max-width: 500px;
+        }
+        
+        .edit-select {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 16px;
+            font-family: 'Poppins', sans-serif;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background-color: white;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            padding-right: 40px;
+        }
+        
+        .edit-select:hover {
+            border-color: #4CAF50;
+        }
+        
+        .edit-select:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        
+        .edit-select option {
+            padding: 10px;
+        }
+        
         .offices-dropdown-container {
             margin-top: 20px;
         }
@@ -330,54 +512,31 @@ $offices = $_SESSION['offices'];
             display: block;
         }
         
-        .dropdown-item-container {
-            display: flex;
-            align-items: center;
-            border-bottom: 1px solid #f0f0f0;
-            background: white;
-            transition: background 0.2s ease;
-        }
-        
-        .dropdown-item-container:hover {
-            background-color: #f1f1f1;
-        }
-        
         .dropdown-item {
             color: #333;
             padding: 14px 20px;
             text-decoration: none;
-            flex: 1;
+            display: block;
             cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
             transition: all 0.2s ease;
             font-weight: 500;
         }
         
-        .delete-btn {
-            background: #f44336;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            margin-right: 8px;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 20px;
-            font-weight: bold;
-            line-height: 1;
-            transition: background 0.2s ease;
-        }
-        
-        .delete-btn:hover {
-            background: #d32f2f;
+        .dropdown-item:hover {
+            background-color: #f1f1f1;
+            padding-left: 25px;
         }
         
         .dropdown-item.empty {
             color: #999;
             cursor: default;
+            display: block;
+            width: 100%;
         }
         
         .dropdown-item.empty:hover {
             background-color: transparent;
-            padding-left: 20px;
         }
         
         .office-details-panel {
