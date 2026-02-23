@@ -7,53 +7,60 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit;
 }
 
-// Initialize session arrays with predefined offices - FORCE RESET
-$_SESSION['offices'] = [
-    ['id' => 1, 'office_name' => 'M.O', 'office_code' => 'MO', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 2, 'office_name' => 'V.M.O', 'office_code' => 'VMO', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 3, 'office_name' => 'HRMO', 'office_code' => 'HRMO', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 4, 'office_name' => 'MPDC', 'office_code' => 'MPDC', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 5, 'office_name' => 'LCR', 'office_code' => 'LCR', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 6, 'office_name' => 'MBO', 'office_code' => 'MBO', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 7, 'office_name' => 'ACCOUNTING', 'office_code' => 'ACCT', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 8, 'office_name' => 'MTO', 'office_code' => 'MTO', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 9, 'office_name' => 'ASSESSOR', 'office_code' => 'ASSR', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 10, 'office_name' => 'LIBRARY', 'office_code' => 'LIB', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 11, 'office_name' => 'RHU', 'office_code' => 'RHU', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 12, 'office_name' => 'MSWD', 'office_code' => 'MSWD', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 13, 'office_name' => 'AGRI', 'office_code' => 'AGRI', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 14, 'office_name' => 'ENGINEERING', 'office_code' => 'ENG', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 15, 'office_name' => 'MARKET', 'office_code' => 'MKT', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 16, 'office_name' => 'MDR', 'office_code' => 'MDR', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 17, 'office_name' => 'R.S.I', 'office_code' => 'RSI', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 18, 'office_name' => 'DENTAL', 'office_code' => 'DNTL', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 19, 'office_name' => 'M.I', 'office_code' => 'MI', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 20, 'office_name' => 'NUTRITION', 'office_code' => 'NUTR', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 21, 'office_name' => 'MOTORPOOL', 'office_code' => 'MTRPL', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 22, 'office_name' => 'DILG', 'office_code' => 'DILG', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 23, 'office_name' => 'OSCA', 'office_code' => 'OSCA', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 24, 'office_name' => 'BAWASA', 'office_code' => 'BWSA', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 25, 'office_name' => 'BPLO', 'office_code' => 'BPLO', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 26, 'office_name' => 'MIDWIFE', 'office_code' => 'MDWF', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 27, 'office_name' => 'LEGAL OFFICE', 'office_code' => 'LEGAL', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')],
-    ['id' => 28, 'office_name' => 'GSO', 'office_code' => 'GSO', 'department' => '', 'contact_person' => '', 'contact_number' => '', 'email' => '', 'created_at' => date('Y-m-d H:i:s')]
-];
+// Initialize session with predefined offices (only if not already set)
+if (!isset($_SESSION['offices'])) {
+    $_SESSION['offices'] = [
+        ['id' => 1, 'office_name' => 'M.O', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 2, 'office_name' => 'V.M.O', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 3, 'office_name' => 'HRMO', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 4, 'office_name' => 'MPDC', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 5, 'office_name' => 'LCR', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 6, 'office_name' => 'MBO', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 7, 'office_name' => 'ACCOUNTING', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 8, 'office_name' => 'MTO', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 9, 'office_name' => 'ASSESSOR', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 10, 'office_name' => 'LIBRARY', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 11, 'office_name' => 'RHU', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 12, 'office_name' => 'MSWD', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 13, 'office_name' => 'AGRI', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 14, 'office_name' => 'ENGINEERING', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 15, 'office_name' => 'MARKET', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 16, 'office_name' => 'MDR', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 17, 'office_name' => 'R.S.I', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 18, 'office_name' => 'DENTAL', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 19, 'office_name' => 'M.I', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 20, 'office_name' => 'NUTRITION', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 21, 'office_name' => 'MOTORPOOL', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 22, 'office_name' => 'DILG', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 23, 'office_name' => 'OSCA', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 24, 'office_name' => 'BAWASA', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 25, 'office_name' => 'BPLO', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 26, 'office_name' => 'MIDWIFE', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 27, 'office_name' => 'LEGAL OFFICE', 'created_at' => date('Y-m-d H:i:s')],
+        ['id' => 28, 'office_name' => 'GSO', 'created_at' => date('Y-m-d H:i:s')]
+    ];
+}
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
     if ($action === 'add_office') {
-        $_SESSION['offices'][] = [
-            'id' => count($_SESSION['offices']) + 1,
-            'office_name' => $_POST['office_name'] ?? '',
-            'office_code' => $_POST['office_code'] ?? '',
-            'department' => $_POST['department'] ?? '',
-            'contact_person' => $_POST['contact_person'] ?? '',
-            'contact_number' => $_POST['contact_number'] ?? '',
-            'email' => $_POST['email'] ?? '',
-            'created_at' => date('Y-m-d H:i:s')
-        ];
+        $office_name = trim($_POST['office_name'] ?? '');
+        if (!empty($office_name)) {
+            // Get the highest ID
+            $maxId = 0;
+            foreach ($_SESSION['offices'] as $office) {
+                if ($office['id'] > $maxId) {
+                    $maxId = $office['id'];
+                }
+            }
+            $_SESSION['offices'][] = [
+                'id' => $maxId + 1,
+                'office_name' => $office_name,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+        }
         $_SESSION['success_message'] = 'Office added successfully!';
         header('Location: offices.php');
         exit;
@@ -104,21 +111,34 @@ $offices = $_SESSION['offices'];
                 <?php endif; ?>
                 
                 <div class="offices-dropdown-container">
-                    <div class="dropdown">
-                        <button class="dropdown-btn" onclick="toggleDropdown()">
-                            OFFICES
-                            <span class="dropdown-arrow">▼</span>
-                        </button>
-                        <div id="officesDropdown" class="dropdown-content">
-                            <?php if (empty($offices)): ?>
-                                <div class="dropdown-item empty">No offices found</div>
-                            <?php else: ?>
-                                <?php foreach ($offices as $index => $office): ?>
-                                    <div class="dropdown-item" onclick="showOfficeDetails(<?php echo $index; ?>)">
-                                        <?php echo htmlspecialchars($office['office_name']); ?>
-                                    </div>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
+                    <div class="offices-header">
+                        <div class="dropdown">
+                            <button class="dropdown-btn" onclick="toggleDropdown()">
+                                OFFICES
+                                <span class="dropdown-arrow">▼</span>
+                            </button>
+                            <div id="officesDropdown" class="dropdown-content">
+                                <?php if (empty($offices)): ?>
+                                    <div class="dropdown-item empty">No offices found</div>
+                                <?php else: ?>
+                                    <?php foreach ($offices as $index => $office): ?>
+                                        <div class="dropdown-item-container" data-office-name="<?php echo strtolower(htmlspecialchars($office['office_name'])); ?>">
+                                            <div class="dropdown-item" onclick="showOfficeDetails(<?php echo $index; ?>)">
+                                                <?php echo htmlspecialchars($office['office_name']); ?>
+                                            </div>
+                                            <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this office?');">
+                                                <input type="hidden" name="action" value="delete_office">
+                                                <input type="hidden" name="id" value="<?php echo $office['id']; ?>">
+                                                <button type="submit" class="delete-btn" title="Delete Office">×</button>
+                                            </form>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        
+                        <div class="search-container">
+                            <input type="text" id="officeSearch" class="search-input" placeholder="🔍 Search offices..." onkeyup="filterOffices()">
                         </div>
                     </div>
                     
@@ -140,27 +160,7 @@ $offices = $_SESSION['offices'];
                 <input type="hidden" name="action" value="add_office">
                 <div class="form-group">
                     <label>Office Name *</label>
-                    <input type="text" name="office_name" required>
-                </div>
-                <div class="form-group">
-                    <label>Office Code *</label>
-                    <input type="text" name="office_code" required>
-                </div>
-                <div class="form-group">
-                    <label>Department</label>
-                    <input type="text" name="department">
-                </div>
-                <div class="form-group">
-                    <label>Contact Person</label>
-                    <input type="text" name="contact_person">
-                </div>
-                <div class="form-group">
-                    <label>Contact Number</label>
-                    <input type="text" name="contact_number">
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" name="email">
+                    <input type="text" name="office_name" placeholder="Enter office name" required autofocus>
                 </div>
                 <button type="submit" class="btn-primary">Add Office</button>
             </form>
@@ -182,6 +182,30 @@ $offices = $_SESSION['offices'];
             document.getElementById('officesDropdown').classList.toggle('show');
         }
         
+        function filterOffices() {
+            const searchInput = document.getElementById('officeSearch');
+            const filter = searchInput.value.toLowerCase();
+            const dropdown = document.getElementById('officesDropdown');
+            const items = dropdown.getElementsByClassName('dropdown-item-container');
+            
+            let visibleCount = 0;
+            
+            for (let i = 0; i < items.length; i++) {
+                const officeName = items[i].getAttribute('data-office-name');
+                if (officeName && officeName.includes(filter)) {
+                    items[i].style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    items[i].style.display = 'none';
+                }
+            }
+            
+            // Auto-open dropdown when searching
+            if (filter.length > 0 && visibleCount > 0) {
+                dropdown.classList.add('show');
+            }
+        }
+        
         function showOfficeDetails(index) {
             const office = offices[index];
             const panel = document.getElementById('officeDetailsPanel');
@@ -192,22 +216,10 @@ $offices = $_SESSION['offices'];
             contentElement.innerHTML = `
                 <div class="details-grid">
                     <div class="detail-item">
-                        <strong>ID:</strong> ${office.id}
+                        <strong>Office ID:</strong> ${office.id}
                     </div>
                     <div class="detail-item">
-                        <strong>Office Code:</strong> ${office.office_code || 'N/A'}
-                    </div>
-                    <div class="detail-item">
-                        <strong>Department:</strong> ${office.department || 'N/A'}
-                    </div>
-                    <div class="detail-item">
-                        <strong>Contact Person:</strong> ${office.contact_person || 'N/A'}
-                    </div>
-                    <div class="detail-item">
-                        <strong>Contact Number:</strong> ${office.contact_number || 'N/A'}
-                    </div>
-                    <div class="detail-item">
-                        <strong>Email:</strong> ${office.email || 'N/A'}
+                        <strong>Created:</strong> ${office.created_at}
                     </div>
                 </div>
             `;
@@ -235,11 +247,43 @@ $offices = $_SESSION['offices'];
             margin-top: 20px;
         }
         
+        .offices-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .search-container {
+            flex: 0 0 auto;
+        }
+        
+        .search-input {
+            width: 400px;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .search-input:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        
+        .search-input::placeholder {
+            color: #999;
+        }
+        
         .dropdown {
             position: relative;
             display: inline-block;
-            width: 100%;
-            max-width: 400px;
+            width: auto;
+            min-width: 400px;
         }
         
         .dropdown-btn {
@@ -286,20 +330,44 @@ $offices = $_SESSION['offices'];
             display: block;
         }
         
+        .dropdown-item-container {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #f0f0f0;
+            background: white;
+            transition: background 0.2s ease;
+        }
+        
+        .dropdown-item-container:hover {
+            background-color: #f1f1f1;
+        }
+        
         .dropdown-item {
             color: #333;
             padding: 14px 20px;
             text-decoration: none;
-            display: block;
+            flex: 1;
             cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
             transition: all 0.2s ease;
             font-weight: 500;
         }
         
-        .dropdown-item:hover {
-            background-color: #f1f1f1;
-            padding-left: 25px;
+        .delete-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            margin-right: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 20px;
+            font-weight: bold;
+            line-height: 1;
+            transition: background 0.2s ease;
+        }
+        
+        .delete-btn:hover {
+            background: #d32f2f;
         }
         
         .dropdown-item.empty {
