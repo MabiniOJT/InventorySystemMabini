@@ -275,14 +275,14 @@ foreach ($items as $item) {
                 <table>
                     <thead>
                         <tr>
+                            <th>No.</th>
                             <th>Item Code</th>
                             <th>Item Name</th>
                             <th>Category</th>
                             <th>Unit</th>
+                            <th>Stock</th>
                             <th>Unit Cost</th>
-                            <th>Qty on Hand</th>
-                            <th>Reorder Level</th>
-                            <th>Stock Status</th>
+                            <th>Total Cost</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -296,31 +296,22 @@ foreach ($items as $item) {
                             </td>
                         </tr>
                         <?php else: ?>
-                            <?php foreach ($items as $item): ?>
-                                <?php
+                            <?php 
+                            $rowNumber = 1;
+                            foreach ($items as $item): 
                                 $qty = floatval($item['quantity_on_hand'] ?? 0);
-                                $reorder = floatval($item['reorder_level'] ?? 0);
-                                
-                                if ($qty == 0) {
-                                    $stockClass = 'stock-out';
-                                    $stockText = 'Out of Stock';
-                                } elseif ($qty <= $reorder && $reorder > 0) {
-                                    $stockClass = 'stock-low';
-                                    $stockText = 'Low Stock';
-                                } else {
-                                    $stockClass = 'stock-ok';
-                                    $stockText = 'In Stock';
-                                }
-                                ?>
+                                $unitCost = floatval($item['unit_cost'] ?? 0);
+                                $totalCost = $qty * $unitCost;
+                            ?>
                                 <tr>
+                                    <td><?php echo $rowNumber++; ?></td>
                                     <td><?php echo htmlspecialchars($item['item_code']); ?></td>
                                     <td><strong><?php echo htmlspecialchars($item['item_name']); ?></strong></td>
                                     <td><?php echo htmlspecialchars($item['category'] ?? 'N/A'); ?></td>
                                     <td><?php echo htmlspecialchars($item['unit'] ?? 'pcs'); ?></td>
-                                    <td>₱<?php echo number_format($item['unit_cost'] ?? 0, 2); ?></td>
-                                    <td><?php echo htmlspecialchars($item['quantity_on_hand'] ?? 0); ?></td>
-                                    <td><?php echo htmlspecialchars($item['reorder_level'] ?? 0); ?></td>
-                                    <td><span class="stock-status <?php echo $stockClass; ?>"><?php echo $stockText; ?></span></td>
+                                    <td><?php echo number_format($qty, 0); ?></td>
+                                    <td>₱<?php echo number_format($unitCost, 2); ?></td>
+                                    <td>₱<?php echo number_format($totalCost, 2); ?></td>
                                     <td>
                                         <button class="btn-action btn-edit">Edit</button>
                                         <form method="POST" style="display: inline;">
