@@ -20,3 +20,30 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+
+### PHP Inventory System ###
+# Environment file (contains sensitive data)
+.env
+
+# Vendor directory
+vendor/
+
+# IDE files
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# User uploaded files
+uploads/
