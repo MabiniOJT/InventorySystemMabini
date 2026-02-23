@@ -1,17 +1,27 @@
 <nav class="navbar">
-    <h1>
-        <?php
-        $page = basename($_SERVER['PHP_SELF'], '.php');
-        $titles = [
-            'dashboard' => 'Dashboard',
-            'products' => 'Product Management',
-            'cost' => 'Cost per Unit',
-            'quantity-list' => 'Quantity List',
-            'quantity-issued' => 'Quantity Issued'
-        ];
-        echo $titles[$page] ?? 'Dashboard';
-        ?>
-    </h1>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <button class="hamburger-menu" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <h1>
+            <?php
+            $page = basename($_SERVER['PHP_SELF'], '.php');
+            $titles = [
+                'dashboard' => 'Dashboard',
+                'item-master-list' => 'Item Master List',
+                'offices' => 'Offices',
+                'report' => 'Report',
+                'products' => 'Product Management',
+                'cost' => 'Cost per Unit',
+                'quantity-list' => 'Quantity List',
+                'quantity-issued' => 'Quantity Issued'
+            ];
+            echo $titles[$page] ?? 'Dashboard';
+            ?>
+        </h1>
+    </div>
     <div class="user-info">
         <div>
             <div class="user-name"><?php echo htmlspecialchars($user['name']); ?></div>
