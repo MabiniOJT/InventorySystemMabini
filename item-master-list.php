@@ -1,4 +1,5 @@
 <?php
+ob_start(); // Start output buffering to prevent premature output
 session_start();
 require_once __DIR__ . '/config/database.php';
 
@@ -10,6 +11,68 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 $conn = getDatabaseConnection();
 
+// Handle AJAX request for item details
+if (isset($_GET['action']) && $_GET['action'] === 'get_item_details' && isset($_GET['id'])) {
+    // Clean output buffer to prevent HTML from being sent
+    ob_clean();
+    
+    $itemId = intval($_GET['id']);
+    
+    try {
+        // Fetch item details
+        $stmt = $conn->prepare("
+            SELECT i.*, c.category_name 
+            FROM items i
+            LEFT JOIN categories c ON i.category_id = c.id
+            WHERE i.id = ?
+        ");
+        $stmt->execute([$itemId]);
+        $item = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$item) {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Item not found']);
+            exit;
+        }
+        
+        // Check if status column exists in inventory_transactions
+        $checkStatus = $conn->query("SHOW COLUMNS FROM inventory_transactions LIKE 'status'");
+        $hasStatusColumn = $checkStatus->rowCount() > 0;
+        
+        // Fetch agencies with recent orders
+        if ($hasStatusColumn) {
+            $stmt = $conn->prepare("
+                SELECT DISTINCT o.office_name, it.transaction_date, it.quantity, it.status
+                FROM inventory_transactions it
+                JOIN offices o ON it.office_id = o.id
+                WHERE it.item_id = ? AND it.transaction_type = 'Issue'
+                ORDER BY it.transaction_date DESC
+                LIMIT 5
+            ");
+        } else {
+            $stmt = $conn->prepare("
+                SELECT DISTINCT o.office_name, it.transaction_date, it.quantity,
+                       'Completed' as status
+                FROM inventory_transactions it
+                JOIN offices o ON it.office_id = o.id
+                WHERE it.item_id = ? AND it.transaction_type = 'Issue'
+                ORDER BY it.transaction_date DESC
+                LIMIT 5
+            ");
+        }
+        $stmt->execute([$itemId]);
+        $agencies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['item' => $item, 'agencies' => $agencies], JSON_PRETTY_PRINT);
+        exit;
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        echo json_encode(['error' => $e->getMessage()]);
+        exit;
+    }
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -19,9 +82,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare("
                 INSERT INTO items (
                     item_code, item_name, category_id, unit, unit_cost,
-                    quantity_on_hand, reorder_level, status, created_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Active', ?)
+                    quantity_on_hand, reorder_level, expiration_date, status, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active', ?)
             ");
+            
+            $expiration = !empty($_POST['expiration_date']) ? $_POST['expiration_date'] : null;
             
             $stmt->execute([
                 $_POST['item_code'] ?? '',
@@ -31,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_POST['unit_cost'] ?? 0,
                 $_POST['quantity_on_hand'] ?? 0,
                 $_POST['reorder_level'] ?? 10,
+                $expiration,
                 $_SESSION['user_id'] ?? null
             ]);
             
@@ -48,9 +114,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 UPDATE items 
                 SET item_code = ?, item_name = ?, category_id = ?, unit = ?, 
                     unit_cost = ?, quantity_on_hand = ?, reorder_level = ?, 
-                    status = ?, updated_at = NOW()
+                    expiration_date = ?, status = ?, updated_at = NOW()
                 WHERE id = ?
             ");
+            
+            $expiration = !empty($_POST['expiration_date']) ? $_POST['expiration_date'] : null;
             
             $stmt->execute([
                 $_POST['item_code'] ?? '',
@@ -60,6 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_POST['unit_cost'] ?? 0,
                 $_POST['quantity_on_hand'] ?? 0,
                 $_POST['reorder_level'] ?? 10,
+                $expiration,
                 $_POST['status'] ?? 'Active',
                 $_POST['id'] ?? 0
             ]);
@@ -147,6 +216,20 @@ $stmt = $conn->query("
     ORDER BY i.item_code ASC
 ");
 $items = $stmt->fetchAll();
+
+// Function to get agencies with recent orders for an item
+function getAgenciesWithOrders($conn, $item_id) {
+    $stmt = $conn->prepare("
+        SELECT DISTINCT o.office_name, it.transaction_date, it.quantity, it.status
+        FROM inventory_transactions it
+        JOIN offices o ON it.office_id = o.id
+        WHERE it.item_id = ? AND it.transaction_type = 'Issue'
+        ORDER BY it.transaction_date DESC
+        LIMIT 5
+    ");
+    $stmt->execute([$item_id]);
+    return $stmt->fetchAll();
+}
 
 // Fetch categories for dropdown
 $categoriesStmt = $conn->query("SELECT id, category_name FROM categories WHERE status = 'Active' ORDER BY category_name");
@@ -354,6 +437,26 @@ $user = $_SESSION['user'] ?? 'User';
             color: white;
             font-size: 12px;
             padding: 5px 10px;
+        }
+        
+        .btn-edit {
+            background: #ffc107;
+            color: #333;
+            font-size: 12px;
+            padding: 5px 10px;
+            margin-right: 5px;
+        }
+        
+        .btn-edit:hover {
+            background: #e0a800;
+        }
+        
+        .clickable-row {
+            cursor: pointer;
+        }
+        
+        .clickable-row:hover {
+            background: #e3f2fd !important;
         }
         
         .modal {
@@ -601,7 +704,7 @@ $user = $_SESSION['user'] ?? 'User';
                                 $isLowStock = ($qty <= $reorder && $reorder > 0);
                                 $displayStatus = $isLowStock ? 'Low Stock' : $item['status'];
                             ?>
-                            <tr>
+                            <tr class="clickable-row" onclick="openDetailsModal(event, <?php echo $item['id']; ?>)" style="cursor: pointer;">
                                 <td><?php echo $no++; ?></td>
                                 <td><?php echo htmlspecialchars($item['item_code']); ?></td>
                                 <td><?php echo htmlspecialchars($item['item_name']); ?></td>
@@ -616,6 +719,7 @@ $user = $_SESSION['user'] ?? 'User';
                                     </span>
                                 </td>
                                 <td>
+                                    <button class="btn btn-edit" onclick="openEditModal(<?php echo htmlspecialchars(json_encode($item)); ?>)">Edit</button>
                                     <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this item?');">
                                         <input type="hidden" name="action" value="delete_item">
                                         <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
@@ -697,6 +801,11 @@ $user = $_SESSION['user'] ?? 'User';
                     </div>
                 </div>
                 
+                <div class="form-group">
+                    <label for="expiration_date">Expiration Date (optional - for medical supplies)</label>
+                    <input type="date" id="expiration_date" name="expiration_date">
+                </div>
+                
                 <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
                     <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Item</button>
@@ -733,6 +842,108 @@ $user = $_SESSION['user'] ?? 'User';
         </div>
     </div>
     
+    <!-- Edit Item Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Item</h2>
+                <span class="close" onclick="closeEditModal()">&times;</span>
+            </div>
+            <form method="POST" id="editForm">
+                <input type="hidden" name="action" value="update_item">
+                <input type="hidden" name="id" id="edit_id">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_item_code">Item Code *</label>
+                        <input type="text" id="edit_item_code" name="item_code" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_category">Category *</label>
+                        <select id="edit_category" name="category" required>
+                            <option value="">Select Category</option>
+                            <?php foreach ($categories as $cat): ?>
+                                <option value="<?php echo $cat['id']; ?>">
+                                    <?php echo htmlspecialchars($cat['category_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_item_name">Item Name *</label>
+                    <input type="text" id="edit_item_name" name="item_name" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_unit">Unit *</label>
+                        <select id="edit_unit" name="unit" required>
+                            <option value="piece">Piece</option>
+                            <option value="box">Box</option>
+                            <option value="pack">Pack</option>
+                            <option value="bottle">Bottle</option>
+                            <option value="ream">Ream</option>
+                            <option value="roll">Roll</option>
+                            <option value="can">Can</option>
+                            <option value="pad">Pad</option>
+                            <option value="book">Book</option>
+                            <option value="unit">Unit</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_unit_cost">Unit Cost *</label>
+                        <input type="number" id="edit_unit_cost" name="unit_cost" step="0.01" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_quantity_on_hand">Quantity on Hand *</label>
+                        <input type="number" id="edit_quantity_on_hand" name="quantity_on_hand" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_reorder_level">Reorder Level *</label>
+                        <input type="number" id="edit_reorder_level" name="reorder_level" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_expiration_date">Expiration Date (optional)</label>
+                        <input type="date" id="edit_expiration_date" name="expiration_date">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_status">Status *</label>
+                        <select id="edit_status" name="status" required>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Item Details Modal -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Item Details</h2>
+                <span class="close" onclick="closeDetailsModal()">&times;</span>
+            </div>
+            <div id="detailsContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+    
     <script>
         function openAddModal() {
             document.getElementById('addModal').style.display = 'block';
@@ -748,6 +959,156 @@ $user = $_SESSION['user'] ?? 'User';
         
         function closeUploadModal() {
             document.getElementById('uploadModal').style.display = 'none';
+        }
+        
+        function openEditModal(item) {
+            document.getElementById('edit_id').value = item.id;
+            document.getElementById('edit_item_code').value = item.item_code;
+            document.getElementById('edit_item_name').value = item.item_name;
+            document.getElementById('edit_category').value = item.category_id || '';
+            document.getElementById('edit_unit').value = item.unit;
+            document.getElementById('edit_unit_cost').value = item.unit_cost;
+            document.getElementById('edit_quantity_on_hand').value = item.quantity_on_hand;
+            document.getElementById('edit_reorder_level').value = item.reorder_level;
+            document.getElementById('edit_expiration_date').value = item.expiration_date || '';
+            document.getElementById('edit_status').value = item.status;
+            
+            document.getElementById('editModal').style.display = 'block';
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+        
+        function openDetailsModal(event, itemId) {
+            // Prevent the row click from triggering during button clicks
+            if (event.target.tagName === 'BUTTON' || event.target.tagName === 'INPUT' || event.target.closest('form')) {
+                return;
+            }
+            
+            document.getElementById('detailsModal').style.display = 'block';
+            document.getElementById('detailsContent').innerHTML = '<p style="text-align:center;padding:20px;">Loading...</p>';
+            
+            // Fetch item details via AJAX
+            fetch('item-master-list.php?action=get_item_details&id=' + itemId)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text(); // Get as text first to debug
+                })
+                .then(text => {
+                    try {
+                        return JSON.parse(text); // Then parse as JSON
+                    } catch (e) {
+                        console.error('Response text:', text); // Log the actual response
+                        throw new Error('Invalid JSON response from server');
+                    }
+                })
+                .then(data => {
+                    // Check if there's an error in the response
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    let html = `
+                        <div style="padding: 0 10px;">
+                            <h3 style="color: #333; margin-bottom: 20px;">${data.item.item_name}</h3>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px;">
+                                <div>
+                                    <p><strong>Item Code:</strong> ${data.item.item_code}</p>
+                                    <p><strong>Category:</strong> ${data.item.category_name || 'Uncategorized'}</p>
+                                    <p><strong>Unit:</strong> ${data.item.unit}</p>
+                                    <p><strong>Unit Cost:</strong> ₱${parseFloat(data.item.unit_cost).toFixed(2)}</p>
+                                </div>
+                                <div>
+                                    <p><strong>Quantity on Hand:</strong> ${data.item.quantity_on_hand}</p>
+                                    <p><strong>Reorder Level:</strong> ${data.item.reorder_level}</p>
+                                    <p><strong>Total Value:</strong> ₱${(data.item.quantity_on_hand * data.item.unit_cost).toFixed(2)}</p>
+                                    <p><strong>Status:</strong> <span class="status-badge status-${data.item.status.toLowerCase()}">${data.item.status}</span></p>
+                                </div>
+                            </div>
+                    `;
+                    
+                    if (data.item.expiration_date) {
+                        const expDate = new Date(data.item.expiration_date);
+                        const today = new Date();
+                        const daysUntilExpiry = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+                        let expiryClass = 'status-active';
+                        let expiryText = '';
+                        
+                        if (daysUntilExpiry < 0) {
+                            expiryClass = 'status-inactive';
+                            expiryText = ' (EXPIRED)';
+                        } else if (daysUntilExpiry <= 30) {
+                            expiryClass = 'status-low';
+                            expiryText = ` (${daysUntilExpiry} days remaining)`;
+                        }
+                        
+                        html += `
+                            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                                <strong>⚠️ Expiration Date:</strong> 
+                                <span class="status-badge ${expiryClass}">${data.item.expiration_date}${expiryText}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    if (data.agencies && data.agencies.length > 0) {
+                        html += `
+                            <h4 style="color: #666; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">
+                                📋 Recent Orders/Issues
+                            </h4>
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead style="background: #f8f9fa;">
+                                        <tr>
+                                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Agency/Office</th>
+                                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Date</th>
+                                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Quantity</th>
+                                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+                        
+                        data.agencies.forEach(agency => {
+                            html += `
+                                <tr>
+                                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0;">${agency.office_name}</td>
+                                    <td style="padding: 10px; border-bottom: 1px solid #f0f0f0;">${agency.transaction_date}</td>
+                                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #f0f0f0;">${agency.quantity}</td>
+                                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #f0f0f0;">
+                                        <span class="status-badge status-${agency.status.toLowerCase()}">${agency.status}</span>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div style="text-align: center; padding: 30px; color: #999;">
+                                <p>No recent orders or issues for this item.</p>
+                            </div>
+                        `;
+                    }
+                    
+                    html += '</div>';
+                    document.getElementById('detailsContent').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('detailsContent').innerHTML = '<p style="text-align:center;padding:20px;color:#dc3545;">Error loading item details: ' + error.message + '</p>';
+                });
+        }
+        
+        function closeDetailsModal() {
+            document.getElementById('detailsModal').style.display = 'none';
         }
         
         // Close modal when clicking outside

@@ -87,6 +87,7 @@ CREATE TABLE items (
     reorder_level INT DEFAULT 10,
     supplier_id INT,
     location VARCHAR(100),
+    expiration_date DATE,
     status ENUM('Active', 'Inactive') DEFAULT 'Active',
     created_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -97,7 +98,8 @@ CREATE TABLE items (
     INDEX idx_item_code (item_code),
     INDEX idx_item_name (item_name),
     INDEX idx_category (category_id),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_expiration_date (expiration_date)
 ) ENGINE=InnoDB;
 
 -- Inventory Transactions table
