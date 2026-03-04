@@ -233,13 +233,13 @@ $user = $_SESSION['user'] ?? 'User';
                 <div class="stat-card">
                     <h3>Pending Issues</h3>
                     <div class="value" style="color: #ffc107;">
-                        <?php echo count(array_filter($transactions, fn($t) => $t['status'] === 'Pending')); ?>
+                        <?php echo count(array_filter($transactions, function($t) { return $t['status'] === 'Pending'; })); ?>
                     </div>
                 </div>
                 <div class="stat-card">
                     <h3>Completed Today</h3>
                     <div class="value" style="color: #28a745;">
-                        <?php echo count(array_filter($transactions, fn($t) => $t['status'] === 'Completed' && $t['transaction_date'] === date('Y-m-d'))); ?>
+                        <?php echo count(array_filter($transactions, function($t) { return $t['status'] === 'Completed' && $t['transaction_date'] === date('Y-m-d'); })); ?>
                     </div>
                 </div>
                 <div class="stat-card">

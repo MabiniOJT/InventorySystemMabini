@@ -212,13 +212,13 @@ $user = $_SESSION['user'] ?? 'User';
                 <div class="stat-card">
                     <h3>Received Today</h3>
                     <div class="value" style="color: #28a745;">
-                        <?php echo count(array_filter($receipts, fn($r) => $r['transaction_date'] === date('Y-m-d'))); ?>
+                        <?php echo count(array_filter($receipts, function($r) { return $r['transaction_date'] === date('Y-m-d'); })); ?>
                     </div>
                 </div>
                 <div class="stat-card">
                     <h3>This Month</h3>
                     <div class="value">
-                        <?php echo count(array_filter($receipts, fn($r) => date('Y-m', strtotime($r['transaction_date'])) === date('Y-m'))); ?>
+                        <?php echo count(array_filter($receipts, function($r) { return date('Y-m', strtotime($r['transaction_date'])) === date('Y-m'); })); ?>
                     </div>
                 </div>
                 <div class="stat-card">

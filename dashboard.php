@@ -66,7 +66,7 @@ $user = $_SESSION['user'];
             </div>
             
             <div class="welcome-box">
-                <h2>Welcome, <?php echo htmlspecialchars($user['name']); ?>! 👋</h2>
+                <h2>Welcome, <?php echo htmlspecialchars($user); ?>! 👋</h2>
                 <p>Here's an overview of your inventory system. Use the sidebar to navigate through different sections.</p>
             </div>
         </div>

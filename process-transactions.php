@@ -350,19 +350,19 @@ $user = $_SESSION['user'] ?? 'User';
                 <div class="stat-card">
                     <h3>Pending Approval</h3>
                     <div class="value" style="color: #ffc107;">
-                        <?php echo count(array_filter($transactions, fn($t) => $t['status'] === 'Pending')); ?>
+                        <?php echo count(array_filter($transactions, function($t) { return $t['status'] === 'Pending'; })); ?>
                     </div>
                 </div>
                 <div class="stat-card">
                     <h3>Approved</h3>
                     <div class="value" style="color: #17a2b8;">
-                        <?php echo count(array_filter($transactions, fn($t) => $t['status'] === 'Approved')); ?>
+                        <?php echo count(array_filter($transactions, function($t) { return $t['status'] === 'Approved'; })); ?>
                     </div>
                 </div>
                 <div class="stat-card">
                     <h3>Completed Today</h3>
                     <div class="value" style="color: #28a745;">
-                        <?php echo count(array_filter($transactions, fn($t) => $t['status'] === 'Completed' && date('Y-m-d', strtotime($t['updated_at'])) === date('Y-m-d'))); ?>
+                        <?php echo count(array_filter($transactions, function($t) { return $t['status'] === 'Completed' && date('Y-m-d', strtotime($t['updated_at'])) === date('Y-m-d'); })); ?>
                     </div>
                 </div>
             </div>

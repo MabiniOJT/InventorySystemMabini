@@ -24,10 +24,10 @@
     </div>
     <div class="user-info">
         <div>
-            <div class="user-name"><?php echo htmlspecialchars($user['name']); ?></div>
-            <div style="font-size: 12px; color: #999;"><?php echo htmlspecialchars($user['email']); ?></div>
+            <div class="user-name"><?php echo htmlspecialchars($_SESSION['user'] ?? 'User'); ?></div>
+            <div style="font-size: 12px; color: #999;"><?php echo htmlspecialchars($_SESSION['email'] ?? ''); ?></div>
         </div>
-        <span class="user-role"><?php echo htmlspecialchars($user['role']); ?></span>
+        <span class="user-role"><?php echo htmlspecialchars($_SESSION['role'] ?? 'User'); ?></span>
         <form method="POST" action="logout.php" style="display: inline;">
             <button type="submit">Logout</button>
         </form>

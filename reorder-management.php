@@ -12,12 +12,10 @@ $conn = getDatabaseConnection();
 
 // Get low stock items
 $stmt = $conn->query("
-    SELECT i.*, c.category_name, s.supplier_name,
+    SELECT i.*,
            (i.reorder_level - i.quantity_on_hand) as shortage,
            (i.reorder_level * 2) as suggested_order_qty
     FROM items i
-    LEFT JOIN categories c ON i.category_id = c.id
-    LEFT JOIN suppliers s ON i.supplier_id = s.id
     WHERE i.status = 'Active' 
       AND i.quantity_on_hand <= i.reorder_level
     ORDER BY 
@@ -32,8 +30,12 @@ $lowStockItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get reorder statistics
 $totalLowStock = count($lowStockItems);
-$outOfStock = count(array_filter($lowStockItems, fn($item) => $item['quantity_on_hand'] == 0));
-$criticalStock = count(array_filter($lowStockItems, fn($item) => $item['quantity_on_hand'] > 0 && $item['quantity_on_hand'] < ($item['reorder_level'] / 2)));
+$outOfStock = count(array_filter($lowStockItems, function($item) {
+    return $item['quantity_on_hand'] == 0;
+}));
+$criticalStock = count(array_filter($lowStockItems, function($item) {
+    return $item['quantity_on_hand'] > 0 && $item['quantity_on_hand'] < ($item['reorder_level'] / 2);
+}));
 
 $user = $_SESSION['user'] ?? 'User';
 ?>
@@ -264,8 +266,8 @@ $user = $_SESSION['user'] ?? 'User';
                         
                         <div class="item-details">
                             <div class="detail-item">
-                                <span class="detail-label">Category</span>
-                                <span class="detail-value"><?php echo htmlspecialchars($item['category_name'] ?? 'N/A'); ?></span>
+                                <span class="detail-label">Item Code</span>
+                                <span class="detail-value"><?php echo htmlspecialchars($item['item_code'] ?? 'N/A'); ?></span>
                             </div>
                             
                             <div class="detail-item">
@@ -317,9 +319,9 @@ $user = $_SESSION['user'] ?? 'User';
                             (brings stock to <?php echo number_format($currentStock + $item['suggested_order_qty']); ?> <?php echo htmlspecialchars($item['unit']); ?>)
                         </div>
                         
-                        <?php if ($item['supplier_name']): ?>
+                        <?php if (!empty($item['supplier'])): ?>
                             <div class="supplier-info">
-                                <strong>📞 Supplier:</strong> <?php echo htmlspecialchars($item['supplier_name']); ?>
+                                <strong>📞 Supplier:</strong> <?php echo htmlspecialchars($item['supplier']); ?>
                             </div>
                         <?php endif; ?>
                         
