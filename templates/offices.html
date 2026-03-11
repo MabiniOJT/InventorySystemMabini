@@ -61,9 +61,14 @@
             </div>
         </div>
         <div id="officeDetailsPanel" class="office-details-panel" style="display: none;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <h3 id="selectedOfficeName" style="margin:0;"></h3>
-                <button id="exportOfficeBtn" class="btn-primary" style="display:none;" onclick="exportOfficeExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <select id="dateAcquiredFilter" onchange="filterByDate()" style="display:none; padding:8px 14px; border:2px solid #ddd; border-radius:8px; font-family:'Poppins',sans-serif; font-size:14px; outline:none; cursor:pointer;">
+                        <option value="">All Dates</option>
+                    </select>
+                    <button id="exportOfficeBtn" class="btn-primary" style="display:none;" onclick="exportOfficeExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
+                </div>
             </div>
             <div id="officeDetailsContent">
                 <div id="loadingSpinner" style="display:none; text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin fa-2x"></i> Loading items...</div>
@@ -128,32 +133,54 @@ function showOfficeDetails(idx){
     tbody.innerHTML='';
     // Store current office id for export
     document.getElementById('exportOfficeBtn').style.display='none';
+    document.getElementById('dateAcquiredFilter').style.display='none';
     window.currentOfficeId=o.id;
+    window.currentOfficeItems=[];
     fetch('/offices/items/'+o.id)
         .then(r=>r.json())
         .then(items=>{
             spinner.style.display='none';
+            window.currentOfficeItems=items;
             if(items.length===0){ noMsg.style.display='block'; return; }
-            tbl.style.display='table';
+            // Populate date filter dropdown
+            const dateFilter=document.getElementById('dateAcquiredFilter');
+            const dates=[...new Set(items.map(it=>it.date_acquired).filter(d=>d))].sort();
+            dateFilter.innerHTML='<option value="">All Dates</option>';
+            dates.forEach(d=>{ dateFilter.innerHTML+=`<option value="${d}">${d}</option>`; });
+            dateFilter.style.display='inline-block';
             document.getElementById('exportOfficeBtn').style.display='inline-block';
-            items.forEach((it,i)=>{
-                const tr=document.createElement('tr');
-                tr.style.borderBottom='1px solid #eee';
-                tr.innerHTML=`
-                    <td style="padding:10px; border:1px solid #eee; text-align:center;">${i+1}</td>
-                    <td style="padding:10px; border:1px solid #eee;">${it.item_code}</td>
-                    <td style="padding:10px; border:1px solid #eee;">${it.item_name}</td>
-                    <td style="padding:10px; border:1px solid #eee;">${it.category_name||''}</td>
-                    <td style="padding:10px; border:1px solid #eee;">${it.office_name||''}</td>
-                    <td style="padding:10px; border:1px solid #eee;">${it.unit||''}</td>
-                    <td style="padding:10px; border:1px solid #eee; text-align:center;">${it.quantity_on_hand}</td>
-                    <td style="padding:10px; border:1px solid #eee; text-align:right;">₱${Number(it.unit_cost).toLocaleString('en',{minimumFractionDigits:2})}</td>
-                    <td style="padding:10px; border:1px solid #eee; text-align:right;">₱${Number(it.total_cost).toLocaleString('en',{minimumFractionDigits:2})}</td>
-                    <td style="padding:10px; border:1px solid #eee;">${it.date_acquired||''}</td>`;
-                tbody.appendChild(tr);
-            });
+            renderOfficeItems(items);
         })
         .catch(()=>{ spinner.style.display='none'; noMsg.style.display='block'; noMsg.textContent='Error loading items.'; });
+}
+function renderOfficeItems(items){
+    const tbl=document.getElementById('officeItemsTable');
+    const tbody=document.getElementById('officeItemsBody');
+    const noMsg=document.getElementById('noItemsMsg');
+    tbody.innerHTML='';
+    if(items.length===0){ tbl.style.display='none'; noMsg.style.display='block'; noMsg.textContent='No items for this date.'; return; }
+    noMsg.style.display='none'; tbl.style.display='table';
+    items.forEach((it,i)=>{
+        const tr=document.createElement('tr');
+        tr.style.borderBottom='1px solid #eee';
+        tr.innerHTML=`
+            <td style="padding:10px; border:1px solid #eee; text-align:center;">${i+1}</td>
+            <td style="padding:10px; border:1px solid #eee;">${it.item_code}</td>
+            <td style="padding:10px; border:1px solid #eee;">${it.item_name}</td>
+            <td style="padding:10px; border:1px solid #eee;">${it.category_name||''}</td>
+            <td style="padding:10px; border:1px solid #eee;">${it.office_name||''}</td>
+            <td style="padding:10px; border:1px solid #eee;">${it.unit||''}</td>
+            <td style="padding:10px; border:1px solid #eee; text-align:center;">${it.quantity_on_hand}</td>
+            <td style="padding:10px; border:1px solid #eee; text-align:right;">₱${Number(it.unit_cost).toLocaleString('en',{minimumFractionDigits:2})}</td>
+            <td style="padding:10px; border:1px solid #eee; text-align:right;">₱${Number(it.total_cost).toLocaleString('en',{minimumFractionDigits:2})}</td>
+            <td style="padding:10px; border:1px solid #eee;">${it.date_acquired||''}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+function filterByDate(){
+    const val=document.getElementById('dateAcquiredFilter').value;
+    const filtered=val ? window.currentOfficeItems.filter(it=>it.date_acquired===val) : window.currentOfficeItems;
+    renderOfficeItems(filtered);
 }
 function exportOfficeExcel(){
     if(window.currentOfficeId) window.location.href='/offices/export/'+window.currentOfficeId;
