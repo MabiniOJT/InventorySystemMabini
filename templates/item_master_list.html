@@ -106,7 +106,7 @@
     {% else %}
     <table id="itemsTable">
         <thead>
-            <tr><th>No.</th><th>Item Code</th><th>Item Name</th><th>Category</th><th>Office</th><th>Unit</th><th>Quantity</th><th>Unit Cost</th><th>Total Cost</th><th>Date Acquired</th><th>Actions</th></tr>
+            <tr><th>No.</th><th>Item Code</th><th>Item Name</th><th>Category</th><th>Unit</th><th>Quantity</th><th>Unit Cost</th><th>Total Cost</th><th>Date Acquired</th><th>Actions</th></tr>
         </thead>
         <tbody>
             {% for item in items %}
@@ -121,7 +121,6 @@
                 <td>{{ item.item_code }}</td>
                 <td>{{ item.item_name }}</td>
                 <td>{{ item.category_name or 'Uncategorized' }}</td>
-                <td>{{ item.office_name or '—' }}</td>
                 <td>{{ item.unit }}</td>
                 <td>{{ qty|number_format(0) }}</td>
                 <td>₱{{ cost|number_format(2) }}</td>

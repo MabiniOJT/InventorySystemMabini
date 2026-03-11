@@ -763,6 +763,123 @@ def offices():
     return render_template('offices.html', offices=offices_list)
 
 
+@app.route('/offices/items/<int:office_id>')
+@login_required
+def office_items(office_id):
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT i.item_code, i.item_name, c.category_name, o.office_name,
+                   i.unit, i.quantity_on_hand, i.unit_cost, i.date_acquired
+            FROM items i
+            LEFT JOIN categories c ON i.category_id = c.id
+            LEFT JOIN offices o ON i.office_id = o.id
+            WHERE i.office_id = %s
+            ORDER BY i.item_code
+        """, (office_id,))
+        items = cur.fetchall()
+    conn.close()
+    result = []
+    for item in items:
+        qty = float(item.get('quantity_on_hand', 0) or 0)
+        cost = float(item.get('unit_cost', 0) or 0)
+        result.append({
+            'item_code': item.get('item_code', ''),
+            'item_name': item.get('item_name', ''),
+            'category_name': item.get('category_name', ''),
+            'office_name': item.get('office_name', ''),
+            'unit': item.get('unit', ''),
+            'quantity_on_hand': qty,
+            'unit_cost': cost,
+            'total_cost': round(qty * cost, 2),
+            'date_acquired': str(item['date_acquired']) if item.get('date_acquired') else ''
+        })
+    return jsonify(result)
+
+
+@app.route('/offices/export/<int:office_id>')
+@login_required
+def export_office_items(office_id):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    import io
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("SELECT office_name FROM offices WHERE id=%s", (office_id,))
+        office = cur.fetchone()
+        cur.execute("""
+            SELECT i.item_code, i.item_name, c.category_name, o.office_name,
+                   i.unit, i.quantity_on_hand, i.unit_cost, i.date_acquired
+            FROM items i
+            LEFT JOIN categories c ON i.category_id = c.id
+            LEFT JOIN offices o ON i.office_id = o.id
+            WHERE i.office_id = %s
+            ORDER BY i.item_code
+        """, (office_id,))
+        items = cur.fetchall()
+    conn.close()
+
+    office_name = office['office_name'] if office else 'Unknown'
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = office_name[:31]
+
+    header_fill = PatternFill(start_color='4CAF50', end_color='4CAF50', fill_type='solid')
+    header_font = Font(name='Arial', bold=True, color='FFFFFF', size=11)
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                         top=Side(style='thin'), bottom=Side(style='thin'))
+
+    headers = ['No.', 'Item Code', 'Item Name', 'Category', 'Office', 'Unit',
+               'Quantity', 'Unit Cost', 'Total Cost', 'Date Acquired']
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+
+    widths = [6, 15, 35, 25, 25, 10, 12, 14, 14, 16]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[chr(64 + i)].width = w
+
+    data_font = Font(name='Arial', size=10)
+    for idx, item in enumerate(items, 1):
+        qty = float(item.get('quantity_on_hand', 0) or 0)
+        cost = float(item.get('unit_cost', 0) or 0)
+        row = [
+            idx,
+            item.get('item_code', ''),
+            item.get('item_name', ''),
+            item.get('category_name', ''),
+            item.get('office_name', ''),
+            item.get('unit', ''),
+            qty,
+            cost,
+            round(qty * cost, 2),
+            str(item['date_acquired']) if item.get('date_acquired') else ''
+        ]
+        for c, val in enumerate(row, 1):
+            cell = ws.cell(row=idx + 1, column=c, value=val)
+            cell.font = data_font
+            cell.border = thin_border
+            if c in (8, 9):
+                cell.number_format = '#,##0.00'
+            if c == 7:
+                cell.number_format = '#,##0'
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    safe_name = office_name.replace(' ', '_')
+    response = make_response(output.read())
+    response.headers['Content-Disposition'] = f'attachment; filename={safe_name}_Items.xlsx'
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    return response
+
+
 # ---------- Report ----------
 
 @app.route('/report.php')
