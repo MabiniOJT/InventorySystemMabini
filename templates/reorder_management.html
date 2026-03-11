@@ -1,0 +1,108 @@
+{% set active_page = 'reorder-management' %}
+{% set page_title = 'Reorder Management' %}
+{% extends 'base.html' %}
+{% block title %}Reorder Management - GSO Inventory System{% endblock %}
+{% block extra_css %}
+<style>
+    .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
+    .content-header h1 { color: #333; font-size: 28px; margin: 0; }
+    .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .stat-card h3 { color: #666; font-size: 14px; font-weight: 500; margin-bottom: 10px; }
+    .stat-card .value { color: #333; font-size: 28px; font-weight: 700; }
+    .btn { padding: 10px 20px; border: none; border-radius: 5px; font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-block; }
+    .btn-primary { background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%); color: white; }
+    .btn-sm { padding: 8px 15px; font-size: 13px; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-reorder { background: #4CAF50; color: white; }
+    .btn-reorder:hover { background: #45a049; }
+    .reorder-card { background: white; padding: 20px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 5px solid #ffc107; transition: all 0.3s; }
+    .reorder-card.out-of-stock { border-left-color: #dc3545; background: #fff5f5; }
+    .reorder-card.critical { border-left-color: #ff6b6b; }
+    .reorder-card:hover { box-shadow: 0 4px 15px rgba(0,0,0,0.15); transform: translateY(-2px); }
+    .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .item-name { font-weight: 600; color: #333; font-size: 18px; }
+    .priority-badge { padding: 6px 15px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .priority-critical { background: #dc3545; color: white; }
+    .priority-urgent { background: #ff6b6b; color: white; }
+    .priority-low { background: #ffc107; color: #333; }
+    .item-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .detail-item { display: flex; flex-direction: column; }
+    .detail-label { font-size: 12px; color: #999; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .detail-value { font-weight: 500; color: #333; font-size: 15px; }
+    .stock-indicator { display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; }
+    .stock-bar { flex: 1; height: 20px; background: #e9ecef; border-radius: 10px; overflow: hidden; }
+    .stock-fill { height: 100%; background: linear-gradient(90deg, #dc3545, #ffc107); transition: width 0.3s; }
+    .stock-fill.ok { background: #28a745; }
+    .suggested-order { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 12px 15px; border-radius: 5px; margin-top: 10px; font-size: 14px; }
+    .supplier-info { background: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 13px; color: #666; }
+    .reorder-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .empty-state h3 { font-size: 24px; margin-bottom: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1>🔄 Reorder Management</h1>
+    <a href="{{ url_for('receive_items') }}" class="btn btn-primary">+ Record Purchase</a>
+</div>
+
+<div class="stats-container">
+    <div class="stat-card"><h3>Out of Stock</h3><div class="value" style="color: #dc3545;">{{ out_of_stock }}</div></div>
+    <div class="stat-card"><h3>Critical Stock</h3><div class="value" style="color: #ff6b6b;">{{ critical_stock }}</div></div>
+    <div class="stat-card"><h3>Low Stock Items</h3><div class="value" style="color: #ffc107;">{{ total_low_stock }}</div></div>
+</div>
+
+<h2 style="margin: 30px 0 20px 0; color: #333;">Items Needing Reorder</h2>
+
+{% if not low_stock_items %}
+<div class="empty-state"><h3>✓ All items are well stocked!</h3><p>No items currently need reordering</p></div>
+{% else %}
+{% for item in low_stock_items %}
+{% set current_stock = (item.quantity_on_hand or 0)|float %}
+{% set reorder_level = (item.reorder_level or 0)|float %}
+{% set stock_pct = ((current_stock / reorder_level) * 100) if reorder_level > 0 else 0 %}
+{% set suggested_qty = (reorder_level * 2)|int %}
+{% set shortage = (reorder_level - current_stock)|int %}
+{% if current_stock == 0 %}
+  {% set priority = 'critical' %}
+  {% set priority_label = 'Out of Stock' %}
+  {% set card_class = 'out-of-stock' %}
+{% elif current_stock < (reorder_level / 2) %}
+  {% set priority = 'urgent' %}
+  {% set priority_label = 'Urgent' %}
+  {% set card_class = 'critical' %}
+{% else %}
+  {% set priority = 'low' %}
+  {% set priority_label = 'Low Stock' %}
+  {% set card_class = '' %}
+{% endif %}
+<div class="reorder-card {{ card_class }}">
+    <div class="item-header">
+        <span class="item-name">{{ item.item_name }} <span style="color: #999; font-size: 14px; font-weight: 400;">({{ item.item_code }})</span></span>
+        <span class="priority-badge priority-{{ priority }}">{{ priority_label }}</span>
+    </div>
+    <div class="item-details">
+        <div class="detail-item"><span class="detail-label">Item Code</span><span class="detail-value">{{ item.item_code or 'N/A' }}</span></div>
+        <div class="detail-item"><span class="detail-label">Current Stock</span><span class="detail-value" style="color: {{ '#dc3545' if current_stock == 0 else '#ffc107' }};">{{ current_stock|number_format(0) }} {{ item.unit }}</span></div>
+        <div class="detail-item"><span class="detail-label">Reorder Level</span><span class="detail-value">{{ reorder_level|number_format(0) }} {{ item.unit }}</span></div>
+        <div class="detail-item"><span class="detail-label">Shortage</span><span class="detail-value" style="color: #dc3545;">{{ shortage }} {{ item.unit }}</span></div>
+        <div class="detail-item"><span class="detail-label">Unit Cost</span><span class="detail-value">₱{{ (item.unit_cost or 0)|number_format(2) }}</span></div>
+        <div class="detail-item"><span class="detail-label">Est. Reorder Cost</span><span class="detail-value" style="color: #28a745;">₱{{ (suggested_qty * (item.unit_cost or 0))|number_format(2) }}</span></div>
+    </div>
+    <div class="stock-indicator">
+        <span style="font-size: 12px; color: #666; min-width: 80px;">Stock Level:</span>
+        <div class="stock-bar"><div class="stock-fill {{ 'ok' if stock_pct >= 100 }}" style="width: {{ [stock_pct, 100]|min }}%;"></div></div>
+        <span style="font-size: 13px; font-weight: 600; color: #333; min-width: 50px; text-align: right;">{{ stock_pct|number_format(0) }}%</span>
+    </div>
+    <div class="suggested-order"><strong>💡 Suggested Order:</strong> {{ suggested_qty }} {{ item.unit }} (brings stock to {{ (current_stock + suggested_qty)|int }} {{ item.unit }})</div>
+    {% if item.supplier %}<div class="supplier-info"><strong>📞 Supplier:</strong> {{ item.supplier }}</div>{% endif %}
+    <div class="reorder-actions" style="margin-top: 15px;">
+        <a href="{{ url_for('receive_items') }}" class="btn btn-reorder btn-sm">Order {{ suggested_qty }} {{ item.unit }}</a>
+        <a href="{{ url_for('item_master_list') }}" class="btn btn-secondary btn-sm">View in Master List</a>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

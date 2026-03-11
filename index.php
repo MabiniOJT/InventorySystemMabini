@@ -6,7 +6,7 @@ session_start();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Mabini Inventory System</title>
+    <title>Login - GSO Inventory System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -246,7 +246,7 @@ session_start();
             </div>
             
             <div class="login-header">
-                <h1>Mabini Inventory System</h1>
+                <h1>GSO Inventory System</h1>
                 <p>Please login to your account</p>
             </div>
 

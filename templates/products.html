@@ -1,0 +1,107 @@
+{% set active_page = 'products' %}
+{% set page_title = 'Products' %}
+{% extends 'base.html' %}
+{% block title %}Products - GSO Inventory System{% endblock %}
+{% block extra_css %}
+<style>
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .section-header h2 { color: #333; margin: 0; }
+    .btn-primary { padding: 10px 20px; background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%); color: white; border: none; border-radius: 5px; cursor: pointer; font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 500; margin-left: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%); color: white; }
+    thead th { padding: 15px; text-align: left; font-weight: 600; font-size: 14px; }
+    tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.3s; }
+    tbody tr:hover { background: #f8f9fa; }
+    tbody td { padding: 15px; color: #333; font-size: 14px; }
+    .btn-action { padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-family: 'Poppins', sans-serif; }
+    .btn-edit { background: #ffc107; color: #333; margin-right: 5px; }
+    .btn-delete { background: #dc3545; color: white; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .modal.show { display: flex; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 30px; border-radius: 15px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+    .close { font-size: 28px; font-weight: bold; color: #999; cursor: pointer; float: right; }
+    .close:hover { color: #333; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 5px; color: #666; font-weight: 500; }
+    .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: 'Poppins', sans-serif; font-size: 14px; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .alert-success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+    .alert-error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <div class="section-header">
+        <h2>Product Management</h2>
+        <div>
+            <button class="btn-primary" onclick="showModal('productModal')">+ Add Product</button>
+            <button class="btn-primary" onclick="showModal('uploadModal')">📤 Upload Excel</button>
+        </div>
+    </div>
+
+    <table>
+        <thead><tr><th>ID</th><th>Product Name</th><th>Description</th><th>Category</th><th>Price</th><th>Date Issued</th><th>Actions</th></tr></thead>
+        <tbody>
+            {% if not products %}
+            <tr><td colspan="7"><div class="empty-state"><p>No products found. Click "Add Product" to get started.</p></div></td></tr>
+            {% else %}
+            {% for product in products %}
+            <tr>
+                <td>{{ product.id }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.description or '' }}</td>
+                <td>{{ product.category or '' }}</td>
+                <td>₱{{ (product.price or 0)|number_format(2) }}</td>
+                <td>{{ product.date_issued or '' }}</td>
+                <td>
+                    <button class="btn-action btn-edit">Edit</button>
+                    <form method="POST" style="display: inline;"><input type="hidden" name="action" value="delete_product"><input type="hidden" name="id" value="{{ product.id }}"><button type="submit" class="btn-action btn-delete" onclick="return confirm('Are you sure?')">Delete</button></form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Product Modal -->
+<div id="productModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('productModal')">&times;</span>
+        <h2>Add New Product</h2>
+        <form method="POST">
+            <input type="hidden" name="action" value="add_product">
+            <div class="form-group"><label>Product Name</label><input type="text" name="product_name" required></div>
+            <div class="form-group"><label>Description</label><textarea name="description" rows="3"></textarea></div>
+            <div class="form-group"><label>Category</label><input type="text" name="category"></div>
+            <div class="form-group"><label>Price</label><input type="number" name="price" step="0.01" required></div>
+            <div class="form-group"><label>Date Issued</label><input type="date" name="date_issued" value="{{ today }}" required></div>
+            <button type="submit" class="btn-primary">Add Product</button>
+        </form>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div id="uploadModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('uploadModal')">&times;</span>
+        <h2>Upload Excel File</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Upload an Excel file with columns: <strong>Name, Price, Date Issued</strong></p>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="upload_excel">
+            <div class="form-group"><label>Select Excel File (.xlsx, .xls, .csv)</label><input type="file" name="excel_file" accept=".xlsx,.xls,.csv" required></div>
+            <button type="submit" class="btn-primary">Upload & Import</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+window.onclick=function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('show');};
+</script>
+{% endblock %}

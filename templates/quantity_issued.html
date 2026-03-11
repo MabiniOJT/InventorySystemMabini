@@ -1,0 +1,86 @@
+{% set active_page = 'quantity-issued' %}
+{% set page_title = 'Quantity Issued' %}
+{% extends 'base.html' %}
+{% block title %}Quantity Issued - GSO Inventory System{% endblock %}
+{% block extra_css %}
+<style>
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .section-header h2 { color: #333; margin: 0; }
+    .btn-primary { padding: 10px 20px; background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%); color: white; border: none; border-radius: 5px; cursor: pointer; font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 500; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%); color: white; }
+    thead th { padding: 15px; text-align: left; font-weight: 600; font-size: 14px; }
+    tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.3s; }
+    tbody tr:hover { background: #f8f9fa; }
+    tbody td { padding: 15px; color: #333; font-size: 14px; }
+    .btn-action { padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-family: 'Poppins', sans-serif; }
+    .btn-edit { background: #ffc107; color: #333; margin-right: 5px; }
+    .btn-delete { background: #dc3545; color: white; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .modal.show { display: flex; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 30px; border-radius: 15px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+    .close { font-size: 28px; font-weight: bold; color: #999; cursor: pointer; float: right; }
+    .close:hover { color: #333; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 5px; color: #666; font-weight: 500; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: 'Poppins', sans-serif; font-size: 14px; }
+    .empty-state { text-align: center; padding: 40px; color: #999; }
+    .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .alert-success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-section active">
+    <div class="section-header">
+        <h2>Quantity Issued</h2>
+        <button class="btn-primary" onclick="showModal('issuedModal')">+ Issue Quantity</button>
+    </div>
+
+    <table>
+        <thead><tr><th>ID</th><th>Product Name</th><th>Quantity Issued</th><th>Issued To</th><th>Date Issued</th><th>Actions</th></tr></thead>
+        <tbody>
+            {% if not issued %}
+            <tr><td colspan="6"><div class="empty-state"><p>No issued quantities. Click "Issue Quantity" to get started.</p></div></td></tr>
+            {% else %}
+            {% for item in issued %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.product_name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.issued_to }}</td>
+                <td>{{ item.date_issued }}</td>
+                <td>
+                    <button class="btn-action btn-edit">Edit</button>
+                    <form method="POST" style="display: inline;"><input type="hidden" name="action" value="delete_issued"><input type="hidden" name="id" value="{{ item.id }}"><button type="submit" class="btn-action btn-delete" onclick="return confirm('Are you sure?')">Delete</button></form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Issued Modal -->
+<div id="issuedModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('issuedModal')">&times;</span>
+        <h2>Issue Quantity</h2>
+        <form method="POST">
+            <input type="hidden" name="action" value="add_issued">
+            <div class="form-group"><label>Product Name</label><input type="text" name="product_name" required></div>
+            <div class="form-group"><label>Quantity</label><input type="number" name="quantity" required></div>
+            <div class="form-group"><label>Issued To</label><input type="text" name="issued_to" placeholder="Person or Department" required></div>
+            <button type="submit" class="btn-primary">Issue Quantity</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+window.onclick=function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('show');};
+</script>
+{% endblock %}

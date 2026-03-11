@@ -147,9 +147,9 @@ CREATE TABLE stock_movements (
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB;
 
--- Insert default admin user (password: admin123)
+-- Insert default admin user (password: password)
 INSERT INTO users (username, password, full_name, email, role, status) VALUES
-('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'System Administrator', 'admin@mabini.gov.ph', 'Admin', 'Active');
+('admin', '$2y$10$CDAhZzWK.AChNWifT6GXmu763.y4ZgOELA49PGLETAmtOfwEcx6UW', 'System Administrator', 'admin@mabini.com', 'Admin', 'Active');
 
 -- Insert default categories
 INSERT INTO categories (category_name, description, status) VALUES

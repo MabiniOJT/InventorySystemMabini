@@ -10,7 +10,15 @@ require_once __DIR__ . '/config/database.php';
 
 $message = '';
 $error = '';
+
 $setupComplete = false;
+
+// Ensure database exists before connecting
+if (!checkDatabaseExists()) {
+    if (!createDatabase()) {
+        $error = "Failed to create database.";
+    }
+}
 
 // Check if tables already exist
 try {

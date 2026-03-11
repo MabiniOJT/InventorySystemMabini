@@ -1,0 +1,29 @@
+{% set active_page = 'dashboard' %}
+{% set page_title = 'Dashboard' %}
+{% extends 'base.html' %}
+{% block title %}Dashboard - GSO Inventory System{% endblock %}
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Total Products</h3>
+        <div class="number">{{ total_products }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>Total Quantity</h3>
+        <div class="number">{{ total_quantity|number_format(0) }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>Quantity Issued</h3>
+        <div class="number">{{ total_issued|number_format(0) }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>Total Value</h3>
+        <div class="number">₱{{ total_value|number_format(2) }}</div>
+    </div>
+</div>
+
+<div class="welcome-box">
+    <h2>Welcome, {{ session.get('user', 'User') }}! 👋</h2>
+    <p>Here's an overview of your inventory system. Use the sidebar to navigate through different sections.</p>
+</div>
+{% endblock %}
