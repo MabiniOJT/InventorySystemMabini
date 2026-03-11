@@ -190,7 +190,7 @@ def item_master_list():
             cur.execute(
                 "SELECT DISTINCT o.office_name, it.transaction_date, it.quantity, it.status "
                 "FROM inventory_transactions it JOIN offices o ON it.office_id=o.id "
-                "WHERE it.item_id=%s AND it.transaction_type='Issue' "
+                "WHERE it.item_id=%s AND it.transaction_type='ISSUE' "
                 "ORDER BY it.transaction_date DESC LIMIT 5",
                 (item_id,),
             )
@@ -498,7 +498,7 @@ def issue_items():
         try:
             item_id = request.form['item_id']
             office_id = request.form['office_id']
-            quantity = int(request.form['quantity'])
+            quantity_requested = int(request.form['quantity_requested'])
             remarks = request.form.get('remarks', '')
 
             with conn.cursor() as cur:
@@ -506,20 +506,25 @@ def issue_items():
                 item = cur.fetchone()
                 if not item:
                     raise Exception('Item not found')
-                if item['quantity_on_hand'] < quantity:
-                    raise Exception(f"Insufficient stock. Available: {item['quantity_on_hand']}")
+                # Don't block if insufficient - supervisor will approve what's available
+                # Just warn in flash message
+                stock_warning = ''
+                if item['quantity_on_hand'] < quantity_requested:
+                    stock_warning = f" (Note: Only {item['quantity_on_hand']} available in stock)"
 
                 ref = f"ISS-{datetime.now():%Y%m%d}-{random.randint(1,9999):04d}"
-                total_cost = quantity * float(item['unit_cost'])
+                total_cost = quantity_requested * float(item['unit_cost'])
+                user_id = session.get('user_id', 1)
                 cur.execute(
                     "INSERT INTO inventory_transactions "
                     "(transaction_type,transaction_date,reference_number,office_id,item_id,"
-                    "quantity,unit_cost,total_cost,remarks,created_by,status) "
-                    "VALUES ('Issue',CURDATE(),%s,%s,%s,%s,%s,%s,%s,%s,'Pending')",
-                    (ref, office_id, item_id, quantity, item['unit_cost'], total_cost, remarks, session.get('user_id', 1)),
+                    "quantity,quantity_requested,unit_cost,total_cost,remarks,created_by,status) "
+                    "VALUES ('ISSUE',CURDATE(),%s,%s,%s,%s,%s,%s,%s,%s,%s,'Pending')",
+                    (ref, office_id, item_id, quantity_requested, quantity_requested, 
+                     item['unit_cost'], total_cost, remarks, user_id),
                 )
             conn.commit()
-            flash(f"Issue request created successfully! Reference: {ref}", 'success')
+            flash(f"Issue request created successfully! Reference: {ref}{stock_warning}", 'success')
         except Exception as e:
             conn.rollback()
             flash(f"Error: {e}", 'error')
@@ -533,7 +538,7 @@ def issue_items():
             "LEFT JOIN offices o ON it.office_id=o.id "
             "LEFT JOIN items i ON it.item_id=i.id "
             "LEFT JOIN users u ON it.processed_by=u.id "
-            "WHERE it.transaction_type='Issue' ORDER BY it.created_at DESC LIMIT 50"
+            "WHERE it.transaction_type='ISSUE' ORDER BY it.created_at DESC LIMIT 50"
         )
         transactions = cur.fetchall()
         cur.execute("SELECT id,office_name FROM offices WHERE status='Active' ORDER BY office_name")
@@ -579,7 +584,7 @@ def receive_items():
                     "INSERT INTO inventory_transactions "
                     "(transaction_type,transaction_date,reference_number,item_id,"
                     "quantity,unit_cost,total_cost,remarks,created_by,processed_by,status) "
-                    "VALUES ('Receive',CURDATE(),%s,%s,%s,%s,%s,%s,%s,%s,'Completed')",
+                    "VALUES ('RECEIVE',CURDATE(),%s,%s,%s,%s,%s,%s,%s,%s,'Completed')",
                     (ref, item_id, quantity, unit_cost, total_cost, remarks, user_id, user_id),
                 )
                 new_qty = item['quantity_on_hand'] + quantity
@@ -607,13 +612,18 @@ def receive_items():
             "SELECT it.*,i.item_name,i.item_code,u.full_name as processed_by_name "
             "FROM inventory_transactions it LEFT JOIN items i ON it.item_id=i.id "
             "LEFT JOIN users u ON it.processed_by=u.id "
-            "WHERE it.transaction_type='Receive' ORDER BY it.created_at DESC LIMIT 50"
+            "WHERE it.transaction_type='RECEIVE' ORDER BY it.created_at DESC LIMIT 50"
         )
         receipts = cur.fetchall()
         cur.execute("SELECT id,item_code,item_name,unit_cost,unit FROM items WHERE status='Active' ORDER BY item_name")
         items = cur.fetchall()
-        cur.execute("SELECT id,supplier_name FROM suppliers WHERE status='Active' ORDER BY supplier_name")
-        suppliers = cur.fetchall()
+        
+        # Try to get suppliers, but handle if table doesn't exist
+        try:
+            cur.execute("SELECT id,supplier_name FROM suppliers WHERE status='Active' ORDER BY supplier_name")
+            suppliers = cur.fetchall()
+        except:
+            suppliers = []
     conn.close()
 
     today_str = date.today().isoformat()
@@ -641,29 +651,74 @@ def process_transactions():
         try:
             with conn.cursor() as cur:
                 if action == 'approve':
-                    cur.execute("UPDATE inventory_transactions SET status='Approved',processed_by=%s,updated_at=NOW() WHERE id=%s", (user_id, tid))
-                    flash('Transaction approved successfully!', 'success')
+                    quantity_approved = request.form.get('quantity_approved')
+                    if quantity_approved:
+                        # Update with approved quantity
+                        quantity_approved = int(quantity_approved)
+                        # Also update the quantity field to match approved quantity
+                        cur.execute(
+                            "UPDATE inventory_transactions SET status='Approved',"
+                            "quantity_approved=%s,quantity=%s,processed_by=%s,updated_at=NOW() WHERE id=%s",
+                            (quantity_approved, quantity_approved, user_id, tid)
+                        )
+                        flash(f'Transaction approved with {quantity_approved} units!', 'success')
+                    else:
+                        # Simple approval without quantity modification
+                        cur.execute(
+                            "UPDATE inventory_transactions SET status='Approved',"
+                            "processed_by=%s,updated_at=NOW() WHERE id=%s",
+                            (user_id, tid)
+                        )
+                        flash('Transaction approved successfully!', 'success')
 
                 elif action == 'complete':
-                    cur.execute("SELECT item_id,quantity,transaction_type FROM inventory_transactions WHERE id=%s", (tid,))
+                    # Get transaction details including office_id and quantity_approved
+                    cur.execute(
+                        "SELECT item_id, quantity, quantity_approved, transaction_type, office_id "
+                        "FROM inventory_transactions WHERE id=%s", 
+                        (tid,)
+                    )
                     trans = cur.fetchone()
-                    if trans and trans['transaction_type'] == 'Issue':
+                    
+                    if trans and trans['transaction_type'] == 'ISSUE':
+                        # Use quantity_approved (or fall back to quantity if null)
+                        qty_to_issue = trans.get('quantity_approved') or trans['quantity']
+                        
+                        # 1. Verify warehouse has the item
                         cur.execute(
-                            "UPDATE items SET quantity_on_hand=quantity_on_hand-%s,updated_at=NOW() "
-                            "WHERE id=%s AND quantity_on_hand>=%s",
-                            (trans['quantity'], trans['item_id'], trans['quantity']),
+                            "SELECT quantity_on_hand FROM items "
+                            "WHERE id=%s AND (office_id IS NULL OR office_id = '')",
+                            (trans['item_id'],)
                         )
-                        if cur.rowcount == 0:
+                        warehouse_item = cur.fetchone()
+                        if not warehouse_item:
+                            raise Exception('Source item not found in warehouse')
+                        
+                        if warehouse_item['quantity_on_hand'] < qty_to_issue:
                             raise Exception('Insufficient stock to complete this transaction')
+                        
+                        # 2. Decrement warehouse stock
+                        cur.execute(
+                            "UPDATE items SET quantity_on_hand=quantity_on_hand-%s, updated_at=NOW() "
+                            "WHERE id=%s",
+                            (qty_to_issue, trans['item_id']),
+                        )
+                        
+                        # 3. Get new balance and log stock movement OUT from warehouse
                         cur.execute("SELECT quantity_on_hand FROM items WHERE id=%s", (trans['item_id'],))
                         new_bal = cur.fetchone()['quantity_on_hand']
                         cur.execute(
-                            "INSERT INTO stock_movements (item_id,transaction_id,movement_type,quantity,balance_after,created_by) "
-                            "VALUES (%s,%s,'OUT',%s,%s,%s)",
-                            (trans['item_id'], tid, trans['quantity'], new_bal, user_id),
+                            "INSERT INTO stock_movements (item_id, transaction_id, movement_type, quantity, balance_after, created_by) "
+                            "VALUES (%s, %s, 'OUT', %s, %s, %s)",
+                            (trans['item_id'], tid, qty_to_issue, new_bal, user_id),
                         )
-                    cur.execute("UPDATE inventory_transactions SET status='Completed',processed_by=%s,updated_at=NOW() WHERE id=%s", (user_id, tid))
-                    flash('Transaction completed successfully!', 'success')
+                    
+                    # Mark transaction as completed
+                    cur.execute(
+                        "UPDATE inventory_transactions SET status='Completed', processed_by=%s, updated_at=NOW() WHERE id=%s", 
+                        (user_id, tid)
+                    )
+                    flash('Transaction completed successfully! Items transferred to office.', 'success')
 
                 elif action == 'cancel':
                     cur.execute("UPDATE inventory_transactions SET status='Cancelled',processed_by=%s,updated_at=NOW() WHERE id=%s", (user_id, tid))
@@ -766,33 +821,47 @@ def offices():
 @app.route('/offices/items/<int:office_id>')
 @login_required
 def office_items(office_id):
+    """
+    Show items issued to an office by querying completed Issue transactions.
+    Each row represents an issue transaction (not aggregated, so you can see history).
+    """
     conn = get_db()
     with conn.cursor() as cur:
+        # Query completed Issue transactions for this office
         cur.execute("""
             SELECT i.item_code, i.item_name, c.category_name, o.office_name,
-                   i.unit, i.quantity_on_hand, i.unit_cost, i.date_acquired
-            FROM items i
+                   i.unit, 
+                   COALESCE(it.quantity_approved, it.quantity) as quantity_issued,
+                   i.unit_cost, 
+                   it.updated_at as date_issued,
+                   it.reference_number
+            FROM inventory_transactions it
+            INNER JOIN items i ON it.item_id = i.id
             LEFT JOIN categories c ON i.category_id = c.id
-            LEFT JOIN offices o ON i.office_id = o.id
-            WHERE i.office_id = %s
-            ORDER BY i.item_code
+            LEFT JOIN offices o ON it.office_id = o.id
+            WHERE it.office_id = %s 
+              AND it.transaction_type = 'ISSUE' 
+              AND it.status = 'Completed'
+            ORDER BY it.updated_at DESC, i.item_code
         """, (office_id,))
-        items = cur.fetchall()
+        transactions = cur.fetchall()
     conn.close()
+    
     result = []
-    for item in items:
-        qty = float(item.get('quantity_on_hand', 0) or 0)
-        cost = float(item.get('unit_cost', 0) or 0)
+    for trans in transactions:
+        qty = float(trans.get('quantity_issued', 0) or 0)
+        cost = float(trans.get('unit_cost', 0) or 0)
         result.append({
-            'item_code': item.get('item_code', ''),
-            'item_name': item.get('item_name', ''),
-            'category_name': item.get('category_name', ''),
-            'office_name': item.get('office_name', ''),
-            'unit': item.get('unit', ''),
-            'quantity_on_hand': qty,
+            'item_code': trans.get('item_code', ''),
+            'item_name': trans.get('item_name', ''),
+            'category_name': trans.get('category_name', ''),
+            'office_name': trans.get('office_name', ''),
+            'unit': trans.get('unit', ''),
+            'quantity_on_hand': qty,  # Keep same field name for frontend compatibility
             'unit_cost': cost,
             'total_cost': round(qty * cost, 2),
-            'date_acquired': str(item['date_acquired']) if item.get('date_acquired') else ''
+            'date_acquired': str(trans['date_issued']) if trans.get('date_issued') else '',
+            'reference': trans.get('reference_number', '')
         })
     return jsonify(result)
 
@@ -804,19 +873,35 @@ def export_office_items(office_id):
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     import io
 
+    # Get optional date filter from query parameter
+    date_filter = request.args.get('date', None)
+
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute("SELECT office_name FROM offices WHERE id=%s", (office_id,))
         office = cur.fetchone()
-        cur.execute("""
-            SELECT i.item_code, i.item_name, c.category_name, o.office_name,
-                   i.unit, i.quantity_on_hand, i.unit_cost, i.date_acquired
-            FROM items i
-            LEFT JOIN categories c ON i.category_id = c.id
-            LEFT JOIN offices o ON i.office_id = o.id
-            WHERE i.office_id = %s
-            ORDER BY i.item_code
-        """, (office_id,))
+        
+        # Build query with optional date filter
+        if date_filter:
+            cur.execute("""
+                SELECT i.item_code, i.item_name, c.category_name, o.office_name,
+                       i.unit, i.quantity_on_hand, i.unit_cost, i.date_acquired
+                FROM items i
+                LEFT JOIN categories c ON i.category_id = c.id
+                LEFT JOIN offices o ON i.office_id = o.id
+                WHERE i.office_id = %s AND i.date_acquired = %s
+                ORDER BY i.item_code
+            """, (office_id, date_filter))
+        else:
+            cur.execute("""
+                SELECT i.item_code, i.item_name, c.category_name, o.office_name,
+                       i.unit, i.quantity_on_hand, i.unit_cost, i.date_acquired
+                FROM items i
+                LEFT JOIN categories c ON i.category_id = c.id
+                LEFT JOIN offices o ON i.office_id = o.id
+                WHERE i.office_id = %s
+                ORDER BY i.item_code
+            """, (office_id,))
         items = cur.fetchall()
     conn.close()
 
@@ -874,8 +959,14 @@ def export_office_items(office_id):
     output.seek(0)
 
     safe_name = office_name.replace(' ', '_')
+    # Add date to filename if filtered
+    if date_filter:
+        filename = f'{safe_name}_Items_{date_filter}.xlsx'
+    else:
+        filename = f'{safe_name}_Items.xlsx'
+    
     response = make_response(output.read())
-    response.headers['Content-Disposition'] = f'attachment; filename={safe_name}_Items.xlsx'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     return response
 
