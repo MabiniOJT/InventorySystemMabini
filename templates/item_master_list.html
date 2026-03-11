@@ -60,6 +60,7 @@
 <div class="content-header">
     <h1>📦 Item Master List</h1>
     <div class="header-actions">
+        <a href="{{ url_for('export_items') }}" class="btn" style="background:#17a2b8;color:white;text-decoration:none;">📥 Export Excel</a>
         <button class="btn btn-primary" onclick="openAddModal()">+ Add New Item</button>
         <button class="btn btn-secondary" onclick="openUploadModal()">📤 Import Excel</button>
     </div>
@@ -105,7 +106,7 @@
     {% else %}
     <table id="itemsTable">
         <thead>
-            <tr><th>No.</th><th>Item Code</th><th>Item Name</th><th>Category</th><th>Unit</th><th>Stock</th><th>Unit Cost</th><th>Total Cost</th><th>Status</th><th>Actions</th></tr>
+            <tr><th>No.</th><th>Item Code</th><th>Item Name</th><th>Category</th><th>Office</th><th>Unit</th><th>Quantity</th><th>Unit Cost</th><th>Total Cost</th><th>Date Acquired</th><th>Actions</th></tr>
         </thead>
         <tbody>
             {% for item in items %}
@@ -120,11 +121,12 @@
                 <td>{{ item.item_code }}</td>
                 <td>{{ item.item_name }}</td>
                 <td>{{ item.category_name or 'Uncategorized' }}</td>
+                <td>{{ item.office_name or '—' }}</td>
                 <td>{{ item.unit }}</td>
                 <td>{{ qty|number_format(0) }}</td>
                 <td>₱{{ cost|number_format(2) }}</td>
                 <td>₱{{ total_cost|number_format(2) }}</td>
-                <td><span class="status-badge status-{{ 'low' if is_low else item.status|lower }}">{{ display_status }}</span></td>
+                <td>{{ item.date_acquired|date_format if item.date_acquired else '—' }}</td>
                 <td>
                     <button class="btn btn-edit" onclick="openEditModal({{ item|tojson }})">Edit</button>
                     <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this item?');">
@@ -153,7 +155,13 @@
                     {% for cat in categories %}<option value="{{ cat.id }}">{{ cat.category_name }}</option>{% endfor %}</select>
                 </div>
             </div>
-            <div class="form-group"><label for="item_name">Item Name *</label><input type="text" id="item_name" name="item_name" required></div>
+            <div class="form-row">
+                <div class="form-group"><label for="item_name">Item Name *</label><input type="text" id="item_name" name="item_name" required></div>
+                <div class="form-group"><label for="office_id">Office</label>
+                    <select id="office_id" name="office_id"><option value="">Select Office</option>
+                    {% for ofc in offices %}<option value="{{ ofc.id }}">{{ ofc.office_name }}</option>{% endfor %}</select>
+                </div>
+            </div>
             <div class="form-row">
                 <div class="form-group"><label for="unit">Unit *</label>
                     <select id="unit" name="unit" required>
@@ -168,7 +176,10 @@
                 <div class="form-group"><label for="quantity_on_hand">Quantity on Hand *</label><input type="number" id="quantity_on_hand" name="quantity_on_hand" required></div>
                 <div class="form-group"><label for="reorder_level">Reorder Level *</label><input type="number" id="reorder_level" name="reorder_level" value="10" required></div>
             </div>
-            <div class="form-group"><label for="expiration_date">Expiration Date (optional - for medical supplies)</label><input type="date" id="expiration_date" name="expiration_date"></div>
+            <div class="form-row">
+                <div class="form-group"><label for="expiration_date">Expiration Date (optional)</label><input type="date" id="expiration_date" name="expiration_date"></div>
+                <div class="form-group"><label for="date_acquired">Date Acquired</label><input type="date" id="date_acquired" name="date_acquired"></div>
+            </div>
             <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
                 <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
                 <button type="submit" class="btn btn-primary">Add Item</button>
@@ -184,7 +195,23 @@
         <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="action" value="upload_excel">
             <div class="form-group"><label for="excel_file">Select Excel File (.xlsx, .xls, .csv)</label><input type="file" id="excel_file" name="excel_file" accept=".xlsx,.xls,.csv" required></div>
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><strong>Excel Format:</strong><br><small>Columns: Item Code, Item Name, Description, Category ID, Unit, Unit Cost, Quantity, Reorder Level</small></div>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <strong>Excel Format (columns in order):</strong>
+                <table style="width:100%; margin-top:10px; font-size:13px; border-collapse:collapse;">
+                    <tr style="background:#e9ecef;"><th style="padding:6px 8px; text-align:left; border:1px solid #dee2e6;">Column</th><th style="padding:6px 8px; text-align:left; border:1px solid #dee2e6;">Header</th><th style="padding:6px 8px; text-align:left; border:1px solid #dee2e6;">Example</th></tr>
+                    <tr><td style="padding:6px 8px; border:1px solid #dee2e6;">A</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Item Code</td><td style="padding:6px 8px; border:1px solid #dee2e6;">SUP-001</td></tr>
+                    <tr><td style="padding:6px 8px; border:1px solid #dee2e6;">B</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Item Name</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Ballpen (Black)</td></tr>
+                    <tr><td style="padding:6px 8px; border:1px solid #dee2e6;">C</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Category</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Office Supplies</td></tr>
+                    <tr><td style="padding:6px 8px; border:1px solid #dee2e6;">D</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Unit</td><td style="padding:6px 8px; border:1px solid #dee2e6;">piece</td></tr>
+                    <tr><td style="padding:6px 8px; border:1px solid #dee2e6;">E</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Unit Cost</td><td style="padding:6px 8px; border:1px solid #dee2e6;">12.50</td></tr>
+                    <tr><td style="padding:6px 8px; border:1px solid #dee2e6;">F</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Quantity</td><td style="padding:6px 8px; border:1px solid #dee2e6;">100</td></tr>
+                    <tr><td style="padding:6px 8px; border:1px solid #dee2e6;">G</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Reorder Level</td><td style="padding:6px 8px; border:1px solid #dee2e6;">10</td></tr>
+                    <tr><td style="padding:6px 8px; border:1px solid #dee2e6;">H</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Expiration Date</td><td style="padding:6px 8px; border:1px solid #dee2e6;">2027-06-30</td></tr>
+                    <tr><td style="padding:6px 8px; border:1px solid #dee2e6;">I</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Date Acquired</td><td style="padding:6px 8px; border:1px solid #dee2e6;">2026-03-01</td></tr>
+                    <tr><td style="padding:6px 8px; border:1px solid #dee2e6;">J</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Office</td><td style="padding:6px 8px; border:1px solid #dee2e6;">Engineering Office</td></tr>
+                </table>
+                <small style="display:block; margin-top:8px; color:#666;">💡 <strong>Category (C)</strong> and <strong>Office (J)</strong> are matched by name — items are automatically sorted into existing categories/offices. New categories are created if the name doesn't exist yet.</small>
+            </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button type="button" class="btn btn-secondary" onclick="closeUploadModal()">Cancel</button>
                 <button type="submit" class="btn btn-primary">Upload</button>
@@ -207,7 +234,13 @@
                     {% for cat in categories %}<option value="{{ cat.id }}">{{ cat.category_name }}</option>{% endfor %}</select>
                 </div>
             </div>
-            <div class="form-group"><label for="edit_item_name">Item Name *</label><input type="text" id="edit_item_name" name="item_name" required></div>
+            <div class="form-row">
+                <div class="form-group"><label for="edit_item_name">Item Name *</label><input type="text" id="edit_item_name" name="item_name" required></div>
+                <div class="form-group"><label for="edit_office_id">Office</label>
+                    <select id="edit_office_id" name="office_id"><option value="">Select Office</option>
+                    {% for ofc in offices %}<option value="{{ ofc.id }}">{{ ofc.office_name }}</option>{% endfor %}</select>
+                </div>
+            </div>
             <div class="form-row">
                 <div class="form-group"><label for="edit_unit">Unit *</label>
                     <select id="edit_unit" name="unit" required>
@@ -224,7 +257,7 @@
             </div>
             <div class="form-row">
                 <div class="form-group"><label for="edit_expiration_date">Expiration Date (optional)</label><input type="date" id="edit_expiration_date" name="expiration_date"></div>
-                <div class="form-group"><label for="edit_status">Status *</label><select id="edit_status" name="status" required><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
+                <div class="form-group"><label for="edit_date_acquired">Date Acquired</label><input type="date" id="edit_date_acquired" name="date_acquired"></div>
             </div>
             <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
                 <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
@@ -259,7 +292,8 @@ function openEditModal(item){
     document.getElementById('edit_quantity_on_hand').value=item.quantity_on_hand;
     document.getElementById('edit_reorder_level').value=item.reorder_level;
     document.getElementById('edit_expiration_date').value=item.expiration_date||'';
-    document.getElementById('edit_status').value=item.status;
+    document.getElementById('edit_date_acquired').value=item.date_acquired||'';
+    document.getElementById('edit_office_id').value=item.office_id||'';
     document.getElementById('editModal').style.display='block';
 }
 function closeEditModal(){document.getElementById('editModal').style.display='none';}

@@ -88,6 +88,8 @@ CREATE TABLE items (
     supplier_id INT,
     location VARCHAR(100),
     expiration_date DATE,
+    date_acquired DATE,
+    office_id INT,
     status ENUM('Active', 'Inactive') DEFAULT 'Active',
     created_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

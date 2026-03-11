@@ -208,11 +208,13 @@ def item_master_list():
 
         if action == 'add_item':
             exp = request.form.get('expiration_date') or None
+            acq = request.form.get('date_acquired') or None
+            office_id = request.form.get('office_id') or None
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO items (item_code,item_name,category_id,unit,unit_cost,"
-                    "quantity_on_hand,reorder_level,expiration_date,status,created_by) "
-                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'Active',%s)",
+                    "quantity_on_hand,reorder_level,expiration_date,date_acquired,office_id,status,created_by) "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Active',%s)",
                     (
                         request.form.get('item_code', ''),
                         request.form.get('item_name', ''),
@@ -222,6 +224,8 @@ def item_master_list():
                         request.form.get('quantity_on_hand', 0),
                         request.form.get('reorder_level', 10),
                         exp,
+                        acq,
+                        office_id,
                         session.get('user_id'),
                     ),
                 )
@@ -230,11 +234,13 @@ def item_master_list():
 
         elif action == 'update_item':
             exp = request.form.get('expiration_date') or None
+            acq = request.form.get('date_acquired') or None
+            office_id = request.form.get('office_id') or None
             with conn.cursor() as cur:
                 cur.execute(
                     "UPDATE items SET item_code=%s,item_name=%s,category_id=%s,unit=%s,"
                     "unit_cost=%s,quantity_on_hand=%s,reorder_level=%s,expiration_date=%s,"
-                    "status=%s,updated_at=NOW() WHERE id=%s",
+                    "date_acquired=%s,office_id=%s,status=%s,updated_at=NOW() WHERE id=%s",
                     (
                         request.form.get('item_code', ''),
                         request.form.get('item_name', ''),
@@ -244,6 +250,8 @@ def item_master_list():
                         request.form.get('quantity_on_hand', 0),
                         request.form.get('reorder_level', 10),
                         exp,
+                        acq,
+                        office_id,
                         request.form.get('status', 'Active'),
                         request.form.get('id', 0),
                     ),
@@ -266,26 +274,108 @@ def item_master_list():
                 ws = wb.active
                 rows = list(ws.iter_rows(min_row=2, values_only=True))
                 imported = 0
+                skipped = 0
+                category_cache = {}  # name -> id
+                office_cache = {}  # name -> id
+
+                duplicates = 0
                 with conn.cursor() as cur:
+                    # Pre-load existing categories
+                    cur.execute("SELECT id, category_name FROM categories")
+                    for cat in cur.fetchall():
+                        category_cache[cat['category_name'].strip().lower()] = cat['id']
+
+                    # Get max auto-generated code number
+                    cur.execute("SELECT item_code FROM items WHERE item_code LIKE 'ITEM-%%' ORDER BY item_code DESC LIMIT 1")
+                    last_auto = cur.fetchone()
+                    auto_num = 1
+                    if last_auto:
+                        try:
+                            auto_num = int(last_auto['item_code'].split('-')[1]) + 1
+                        except (IndexError, ValueError):
+                            pass
+
                     for row in rows:
-                        if not row[0] and not row[1]:
+                        if len(row) < 2 or (not row[0] and not row[1]):
+                            skipped += 1
                             continue
-                        cur.execute(
-                            "INSERT INTO items (item_code,item_name,category_id,unit,unit_cost,"
-                            "quantity_on_hand,reorder_level,status,created_by) "
-                            "VALUES (%s,%s,%s,%s,%s,%s,%s,'Active',%s)",
-                            (
-                                row[0] or '', row[1] or '', row[3] if len(row) > 3 else None,
-                                row[4] if len(row) > 4 else 'piece',
-                                row[5] if len(row) > 5 else 0,
-                                row[6] if len(row) > 6 else 0,
-                                row[7] if len(row) > 7 else 10,
-                                session.get('user_id'),
-                            ),
-                        )
-                        imported += 1
+
+                        item_code = str(row[0]).strip() if row[0] else ''
+                        item_name = str(row[1]).strip() if row[1] else ''
+                        cat_name = str(row[2]).strip() if len(row) > 2 and row[2] else ''
+                        unit = str(row[3]).strip().lower() if len(row) > 3 and row[3] else 'piece'
+                        unit_cost = float(row[4]) if len(row) > 4 and row[4] else 0
+                        quantity = int(float(str(row[5]))) if len(row) > 5 and row[5] else 0
+                        reorder = int(float(str(row[6]))) if len(row) > 6 and row[6] else 10
+                        exp_date = None
+                        if len(row) > 7 and row[7]:
+                            if isinstance(row[7], (datetime, date)):
+                                exp_date = row[7].strftime('%Y-%m-%d')
+                            else:
+                                exp_date = str(row[7]).strip() or None
+
+                        acq_date = None
+                        if len(row) > 8 and row[8]:
+                            if isinstance(row[8], (datetime, date)):
+                                acq_date = row[8].strftime('%Y-%m-%d')
+                            else:
+                                acq_date = str(row[8]).strip() or None
+
+                        office_name = str(row[9]).strip() if len(row) > 9 and row[9] else ''
+
+                        # Auto-generate item code if empty
+                        if not item_code:
+                            item_code = f"ITEM-{auto_num:05d}"
+                            auto_num += 1
+
+                        # Auto-match or create category
+                        category_id = None
+                        if cat_name:
+                            key = cat_name.lower()
+                            if key in category_cache:
+                                category_id = category_cache[key]
+                            else:
+                                cur.execute(
+                                    "INSERT INTO categories (category_name, description, status) VALUES (%s, %s, 'Active')",
+                                    (cat_name, f'Auto-created from Excel import'),
+                                )
+                                conn.commit()
+                                category_id = cur.lastrowid
+                                category_cache[key] = category_id
+
+                        # Auto-match office by name
+                        matched_office_id = None
+                        if office_name:
+                            okey = office_name.lower()
+                            if okey not in office_cache:
+                                cur.execute("SELECT id FROM offices WHERE LOWER(office_name)=%s AND status='Active'", (okey,))
+                                orow = cur.fetchone()
+                                if orow:
+                                    office_cache[okey] = orow['id']
+                            matched_office_id = office_cache.get(okey)
+
+                        try:
+                            cur.execute(
+                                "INSERT INTO items (item_code,item_name,category_id,unit,unit_cost,"
+                                "quantity_on_hand,reorder_level,expiration_date,date_acquired,office_id,status,created_by) "
+                                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Active',%s)",
+                                (
+                                    item_code, item_name, category_id,
+                                    unit, unit_cost, quantity, reorder, exp_date, acq_date,
+                                    matched_office_id,
+                                    session.get('user_id'),
+                                ),
+                            )
+                            imported += 1
+                        except pymysql.err.IntegrityError:
+                            duplicates += 1
                 conn.commit()
-                flash(f'Successfully imported {imported} items!', 'success')
+                msg = f'Successfully imported {imported} items!'
+                if skipped:
+                    msg += f' ({skipped} empty rows skipped)'
+                if duplicates:
+                    msg += f' ({duplicates} duplicates skipped)'
+                flash(msg, 'success')
 
         conn.close()
         return redirect(url_for('item_master_list'))
@@ -293,12 +383,16 @@ def item_master_list():
     # GET
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT i.*, c.category_name FROM items i "
-            "LEFT JOIN categories c ON i.category_id=c.id ORDER BY i.item_code ASC"
+            "SELECT i.*, c.category_name, o.office_name FROM items i "
+            "LEFT JOIN categories c ON i.category_id=c.id "
+            "LEFT JOIN offices o ON i.office_id=o.id "
+            "ORDER BY i.item_code ASC"
         )
         items = cur.fetchall()
         cur.execute("SELECT id, category_name FROM categories WHERE status='Active' ORDER BY category_name")
         categories = cur.fetchall()
+        cur.execute("SELECT id, office_name FROM offices WHERE status='Active' ORDER BY office_name")
+        offices_list = cur.fetchall()
     conn.close()
 
     total_items = len(items)
@@ -313,9 +407,83 @@ def item_master_list():
         total_value += qty * cost
 
     return render_template('item_master_list.html',
-                           items=items, categories=categories,
+                           items=items, categories=categories, offices=offices_list,
                            total_items=total_items, low_stock=low_stock,
                            total_value=total_value)
+
+
+# ---------- Export Items to Excel ----------
+
+@app.route('/export-items')
+@login_required
+def export_items():
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from io import BytesIO
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT i.item_code, i.item_name, c.category_name, o.office_name, i.unit, i.unit_cost, "
+            "i.quantity_on_hand, i.reorder_level, i.expiration_date, i.date_acquired "
+            "FROM items i LEFT JOIN categories c ON i.category_id=c.id "
+            "LEFT JOIN offices o ON i.office_id=o.id ORDER BY i.item_code ASC"
+        )
+        items = cur.fetchall()
+    conn.close()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Inventory Items'
+
+    headers = ['Item Code', 'Item Name', 'Category', 'Office', 'Unit', 'Unit Cost', 'Quantity', 'Reorder Level', 'Expiration Date', 'Date Acquired']
+    header_fill = PatternFill(start_color='4CAF50', end_color='4CAF50', fill_type='solid')
+    header_font = Font(name='Arial', bold=True, color='FFFFFF', size=11)
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+
+    widths = [15, 35, 25, 25, 12, 12, 12, 15, 18, 18]
+    for i, w in enumerate(widths, 1):
+        col_letter = chr(64 + i) if i <= 26 else chr(64 + (i - 1) // 26) + chr(65 + (i - 1) % 26)
+        ws.column_dimensions[col_letter].width = w
+
+    data_font = Font(name='Arial', size=10)
+    for r, item in enumerate(items, 2):
+        values = [
+            item['item_code'], item['item_name'], item.get('category_name', ''),
+            item.get('office_name', ''),
+            item['unit'], float(item.get('unit_cost') or 0),
+            int(item.get('quantity_on_hand') or 0), int(item.get('reorder_level') or 0),
+            item['expiration_date'].strftime('%Y-%m-%d') if item.get('expiration_date') else '',
+            item['date_acquired'].strftime('%Y-%m-%d') if item.get('date_acquired') else '',
+        ]
+        for c, val in enumerate(values, 1):
+            cell = ws.cell(row=r, column=c, value=val if val != '' else None)
+            cell.font = data_font
+            cell.border = thin_border
+            if c == 6:
+                cell.number_format = '#,##0.00'
+            if c in (7, 8):
+                cell.number_format = '#,##0'
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    resp = make_response(output.read())
+    resp.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    resp.headers['Content-Disposition'] = f'attachment; filename=inventory_items_{timestamp}.xlsx'
+    return resp
 
 
 # ---------- Issue Items ----------
@@ -555,46 +723,44 @@ def process_transactions():
 @app.route('/offices', methods=['GET', 'POST'])
 @login_required
 def offices():
-    # Session-based offices (same as PHP version)
-    if 'offices' not in session:
-        session['offices'] = [
-            {'id': i+1, 'office_name': n, 'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-            for i, n in enumerate([
-                'M.O','V.M.O','HRMO','MPDC','LCR','MBO','ACCOUNTING','MTO','ASSESSOR',
-                'LIBRARY','RHU','MSWD','AGRI','ENGINEERING','MARKET','MDR','R.S.I',
-                'DENTAL','M.I','NUTRITION','MOTORPOOL','DILG','OSCA','BAWASA','BPLO',
-                'MIDWIFE','LEGAL OFFICE','GSO',
-            ])
-        ]
+    conn = get_db()
 
     if request.method == 'POST':
         action = request.form.get('action', '')
         if action == 'add_office':
             name = request.form.get('office_name', '').strip()
             if name:
-                offices_list = session['offices']
-                max_id = max((o['id'] for o in offices_list), default=0)
-                offices_list.append({'id': max_id+1, 'office_name': name, 'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
-                session['offices'] = offices_list
+                code = name.upper().replace(' ', '')[:20]
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO offices (office_code, office_name, status) VALUES (%s, %s, 'Active')",
+                        (code, name),
+                    )
+                conn.commit()
             flash('Office added successfully!', 'success')
         elif action == 'edit_office':
             oid = int(request.form.get('id', 0))
             new_name = request.form.get('office_name', '').strip()
             if new_name:
-                offices_list = session['offices']
-                for o in offices_list:
-                    if o['id'] == oid:
-                        o['office_name'] = new_name
-                        break
-                session['offices'] = offices_list
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE offices SET office_name=%s, updated_at=NOW() WHERE id=%s", (new_name, oid))
+                conn.commit()
             flash('Office updated successfully!', 'success')
         elif action == 'delete_office':
             oid = int(request.form.get('id', 0))
-            session['offices'] = [o for o in session['offices'] if o['id'] != oid]
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM offices WHERE id=%s", (oid,))
+            conn.commit()
             flash('Office deleted successfully!', 'success')
+        conn.close()
         return redirect(url_for('offices'))
 
-    return render_template('offices.html', offices=session['offices'])
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM offices ORDER BY office_name")
+        offices_list = cur.fetchall()
+    conn.close()
+
+    return render_template('offices.html', offices=offices_list)
 
 
 # ---------- Report ----------
