@@ -302,8 +302,8 @@
     </select>
     <select id="typeFilter" onchange="applyFilters()">
         <option value="all" {{ 'selected' if type_filter=='all' }}>All Types</option>
-        <option value="Issue" {{ 'selected' if type_filter=='Issue' }}>Issue</option>
-        <option value="Receive" {{ 'selected' if type_filter=='Receive' }}>Receive</option>
+        <option value="ISSUE" {{ 'selected' if type_filter=='ISSUE' }}>Issue</option>
+        <option value="RECEIVE" {{ 'selected' if type_filter=='RECEIVE' }}>Receive</option>
     </select>
 </div>
 
@@ -317,7 +317,7 @@
 {% set status_class = trans.status|lower %}
 <div class="transaction-card {{ status_class }}">
     <div class="transaction-header">
-        <span class="transaction-ref">{{ '📤' if trans.transaction_type == 'Issue' else '📥' }}
+        <span class="transaction-ref">{{ '📤' if trans.transaction_type == 'ISSUE' else '📥' }}
             {{ trans.reference_number }}</span>
         <div style="display: flex; gap: 10px;">
             <span class="transaction-type type-{{ trans.transaction_type|lower }}">{{ trans.transaction_type }}</span>
@@ -358,7 +358,7 @@
         {% endif %}
     </div>
 
-    {% if trans.transaction_type == 'Issue' and trans.quantity_on_hand is not none %}
+    {% if trans.transaction_type == 'ISSUE' and trans.quantity_on_hand is not none %}
     {% set qty_to_check = trans.quantity_requested if trans.quantity_requested else trans.quantity %}
     {% if trans.quantity_on_hand < qty_to_check %} <div class="stock-warning">⚠️ Warning: Current stock ({{
         trans.quantity_on_hand }}) is less than requested quantity ({{ qty_to_check }}). Consider approving a lower
