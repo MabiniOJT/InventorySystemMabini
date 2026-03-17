@@ -164,6 +164,45 @@
         color: white;
     }
 
+    .btn-sm {
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+
+    .btn-approve {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .btn-approve:hover {
+        background: #138496;
+    }
+
+    .btn-complete {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-complete:hover {
+        background: #218838;
+    }
+
+    .btn-cancel {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-cancel:hover {
+        background: #c82333;
+    }
+
+    .action-buttons {
+        margin-top: 12px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
     .modal {
         display: none;
         position: fixed;
@@ -271,6 +310,16 @@
         border: 1px solid #f5c6cb;
         color: #721c24;
     }
+
+    .stock-warning {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 10px 12px;
+        border-radius: 5px;
+        margin-top: 10px;
+        font-size: 13px;
+        color: #856404;
+    }
 </style>
 {% endblock %}
 
@@ -334,6 +383,41 @@
                 class="detail-value">{{ trans.remarks }}</span></div>
         {% endif %}
     </div>
+
+    {% if trans.status == 'Pending' and trans.quantity_on_hand is not none and trans.quantity_on_hand < (trans.quantity_requested if trans.quantity_requested else trans.quantity) %}
+    <div class="stock-warning">
+        ⚠ Current stock ({{ trans.quantity_on_hand|number_format(0) }}) is lower than requested quantity
+        ({{ (trans.quantity_requested if trans.quantity_requested else trans.quantity)|number_format(0) }}).
+    </div>
+    {% endif %}
+
+    <div class="action-buttons">
+        {% if trans.status == 'Pending' %}
+        <button type="button" class="btn btn-approve btn-sm" data-trans-id="{{ trans.id }}"
+            data-ref="{{ trans.reference_number }}"
+            data-qty="{{ trans.quantity_requested if trans.quantity_requested else trans.quantity }}"
+            data-stock="{{ trans.quantity_on_hand if trans.quantity_on_hand is not none else 999999 }}"
+            data-item="{{ trans.item_name|e }}" onclick="openApproveModalFromButton(this)">✓ Approve</button>
+        <form method="POST" style="display: inline;" onsubmit="return confirm('Cancel this transaction?');">
+            <input type="hidden" name="transaction_id" value="{{ trans.id }}">
+            <input type="hidden" name="action" value="cancel">
+            <button type="submit" class="btn btn-cancel btn-sm">✗ Cancel</button>
+        </form>
+        {% endif %}
+        {% if trans.status == 'Approved' %}
+        <form method="POST" style="display: inline;"
+            onsubmit="return confirm('Complete this transaction? This will update inventory levels.');">
+            <input type="hidden" name="transaction_id" value="{{ trans.id }}">
+            <input type="hidden" name="action" value="complete">
+            <button type="submit" class="btn btn-complete btn-sm">✓ Complete</button>
+        </form>
+        <form method="POST" style="display: inline;" onsubmit="return confirm('Cancel this transaction?');">
+            <input type="hidden" name="transaction_id" value="{{ trans.id }}">
+            <input type="hidden" name="action" value="cancel">
+            <button type="submit" class="btn btn-cancel btn-sm">✗ Cancel</button>
+        </form>
+        {% endif %}
+    </div>
 </div>
 {% endfor %}
 {% endif %}
@@ -381,12 +465,103 @@
         </form>
     </div>
 </div>
+
+<!-- Approve Modal -->
+<div id="approveModal" class="modal">
+    <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-header">
+            <h2>Approve Issue Request</h2><span class="close" onclick="closeApproveModal()">&times;</span>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="transaction_id" id="approve_transaction_id">
+            <input type="hidden" name="action" value="approve">
+
+            <div style="background: #f8f9fa; padding: 14px; border-radius: 8px; margin-bottom: 16px;">
+                <div style="color: #666;"><strong>Reference:</strong> <span id="approve_ref_number"></span></div>
+                <div style="color: #666; margin-top: 4px;"><strong>Item:</strong> <span id="approve_item_name"></span></div>
+            </div>
+
+            <div class="form-group">
+                <label>Quantity Requested</label>
+                <input type="text" id="approve_requested_qty" readonly
+                    style="background: #f8f9fa; font-weight: 600;">
+            </div>
+
+            <div class="form-group">
+                <label>Available Stock</label>
+                <input type="text" id="approve_stock" readonly style="background: #f8f9fa;">
+            </div>
+
+            <div class="form-group">
+                <label for="quantity_approved">Quantity to Approve *</label>
+                <input type="number" id="quantity_approved" name="quantity_approved" min="1" required
+                    onchange="validateApprovedQty()">
+                <small style="color: #666; font-size: 12px;">You can approve less than requested for partial issue.</small>
+                <div id="approve_warning"
+                    style="display: none; margin-top: 8px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; color: #856404; border-radius: 4px; font-size: 13px;">
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeApproveModal()">Cancel</button>
+                <button type="submit" class="btn btn-approve">✓ Approve Request</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    let currentStock = 0;
+    let requestedQty = 0;
+
     function openIssueModal() { document.getElementById('issueModal').style.display = 'block'; }
     function closeIssueModal() { document.getElementById('issueModal').style.display = 'none'; }
+
+    function openApproveModal(transId, refNumber, qtyRequested, stock, itemName) {
+        document.getElementById('approve_transaction_id').value = transId;
+        document.getElementById('approve_ref_number').textContent = refNumber;
+        document.getElementById('approve_item_name').textContent = itemName;
+        document.getElementById('approve_requested_qty').value = qtyRequested;
+        document.getElementById('approve_stock').value = stock;
+        document.getElementById('quantity_approved').value = Math.min(qtyRequested, stock);
+
+        currentStock = stock;
+        requestedQty = qtyRequested;
+        validateApprovedQty();
+        document.getElementById('approveModal').style.display = 'block';
+    }
+
+    function openApproveModalFromButton(btn) {
+        openApproveModal(
+            parseInt(btn.dataset.transId),
+            btn.dataset.ref,
+            parseInt(btn.dataset.qty),
+            parseInt(btn.dataset.stock),
+            btn.dataset.item
+        );
+    }
+
+    function closeApproveModal() {
+        document.getElementById('approveModal').style.display = 'none';
+    }
+
+    function validateApprovedQty() {
+        const approved = parseInt(document.getElementById('quantity_approved').value) || 0;
+        const warning = document.getElementById('approve_warning');
+
+        if (approved > currentStock) {
+            warning.style.display = 'block';
+            warning.textContent = `Warning: Approved quantity (${approved}) exceeds available stock (${currentStock}). This request cannot be completed until stock is replenished.`;
+        } else if (approved < requestedQty) {
+            warning.style.display = 'block';
+            warning.textContent = `Note: Approving ${approved} units (less than requested ${requestedQty}).`;
+        } else {
+            warning.style.display = 'none';
+        }
+    }
+
     function updateStock() {
         const s = document.getElementById('item_id'), o = s.options[s.selectedIndex], ind = document.getElementById('stockIndicator');
         if (o.value) {
