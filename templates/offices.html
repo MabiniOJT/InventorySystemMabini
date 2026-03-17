@@ -338,8 +338,17 @@
         window.currentOfficeId = o.id;
         window.currentOfficeItems = [];
         fetch('/offices/items/' + o.id)
-            .then(r => r.json())
+            .then(async (r) => {
+                const data = await r.json();
+                if (!r.ok) {
+                    throw new Error(data.error || 'Error loading items.');
+                }
+                return data;
+            })
             .then(items => {
+                if (!Array.isArray(items)) {
+                    throw new Error('Unexpected response format.');
+                }
                 spinner.style.display = 'none';
                 window.currentOfficeItems = items;
                 if (items.length === 0) { noMsg.style.display = 'block'; return; }
@@ -352,7 +361,11 @@
                 document.getElementById('exportOfficeBtn').style.display = 'inline-block';
                 renderOfficeItems(items);
             })
-            .catch(() => { spinner.style.display = 'none'; noMsg.style.display = 'block'; noMsg.textContent = 'Error loading items.'; });
+            .catch((err) => {
+                spinner.style.display = 'none';
+                noMsg.style.display = 'block';
+                noMsg.textContent = err.message || 'Error loading items.';
+            });
     }
     function renderOfficeItems(items) {
         const tbl = document.getElementById('officeItemsTable');
