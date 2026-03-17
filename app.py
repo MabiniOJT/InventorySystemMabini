@@ -502,7 +502,6 @@ def issue_items():
 
         try:
             with conn.cursor() as cur:
-<<<<<<< HEAD
                 if action == 'create_issue':
                     item_id = request.form['item_id']
                     office_id = request.form['office_id']
@@ -622,36 +621,6 @@ def issue_items():
                 else:
                     raise Exception('Invalid action')
 
-=======
-                cur.execute(
-                    "SELECT item_code,item_name,quantity_on_hand,unit_cost,office_id "
-                    "FROM items WHERE id=%s",
-                    (item_id,)
-                )
-                item = cur.fetchone()
-                if not item:
-                    raise Exception('Item not found')
-                if item.get('office_id') not in (None, 0):
-                    raise Exception('Selected item is office-assigned. Please choose a warehouse item.')
-                # Don't block if insufficient - supervisor will approve what's available
-                # Just warn in flash message
-                stock_warning = ''
-                if item['quantity_on_hand'] < quantity_requested:
-                    stock_warning = f" (Note: Only {item['quantity_on_hand']} available in stock)"
-
-                ref = f"ISS-{datetime.now():%Y%m%d}-{random.randint(1,9999):04d}"
-                txn_no = f"TXN-{datetime.now():%Y%m%d%H%M%S%f}-{random.randint(100,999)}"
-                total_cost = quantity_requested * float(item['unit_cost'])
-                user_id = session.get('user_id', 1)
-                cur.execute(
-                    "INSERT INTO inventory_transactions "
-                    "(transaction_number,transaction_type,transaction_date,reference_number,office_id,item_id,"
-                    "quantity,quantity_requested,unit_cost,total_cost,remarks,created_by,status) "
-                    "VALUES (%s,'ISSUE',CURDATE(),%s,%s,%s,%s,%s,%s,%s,%s,%s,'Pending')",
-                    (txn_no, ref, office_id, item_id, quantity_requested, quantity_requested,
-                     item['unit_cost'], total_cost, remarks, user_id),
-                )
->>>>>>> 1447a2c3d451fb1cfde2dc017c5a03dc9706bdda
             conn.commit()
         except Exception as e:
             conn.rollback()
@@ -1314,3 +1283,4 @@ def quantity_issued():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
