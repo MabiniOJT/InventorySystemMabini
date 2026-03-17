@@ -188,7 +188,9 @@ def item_master_list():
                     item[k] = v.isoformat()
 
             cur.execute(
-                "SELECT DISTINCT o.office_name, it.transaction_date, it.quantity, it.status "
+                "SELECT DISTINCT o.office_name, it.transaction_date, "
+                "COALESCE(NULLIF(it.quantity,0), it.quantity_approved, it.quantity_requested, 0) AS quantity, "
+                "it.status "
                 "FROM inventory_transactions it JOIN offices o ON it.office_id=o.id "
                 "WHERE it.item_id=%s AND it.transaction_type='ISSUE' "
                 "ORDER BY it.transaction_date DESC LIMIT 5",
@@ -500,6 +502,7 @@ def issue_items():
 
         try:
             with conn.cursor() as cur:
+<<<<<<< HEAD
                 if action == 'create_issue':
                     item_id = request.form['item_id']
                     office_id = request.form['office_id']
@@ -619,6 +622,36 @@ def issue_items():
                 else:
                     raise Exception('Invalid action')
 
+=======
+                cur.execute(
+                    "SELECT item_code,item_name,quantity_on_hand,unit_cost,office_id "
+                    "FROM items WHERE id=%s",
+                    (item_id,)
+                )
+                item = cur.fetchone()
+                if not item:
+                    raise Exception('Item not found')
+                if item.get('office_id') not in (None, 0):
+                    raise Exception('Selected item is office-assigned. Please choose a warehouse item.')
+                # Don't block if insufficient - supervisor will approve what's available
+                # Just warn in flash message
+                stock_warning = ''
+                if item['quantity_on_hand'] < quantity_requested:
+                    stock_warning = f" (Note: Only {item['quantity_on_hand']} available in stock)"
+
+                ref = f"ISS-{datetime.now():%Y%m%d}-{random.randint(1,9999):04d}"
+                txn_no = f"TXN-{datetime.now():%Y%m%d%H%M%S%f}-{random.randint(100,999)}"
+                total_cost = quantity_requested * float(item['unit_cost'])
+                user_id = session.get('user_id', 1)
+                cur.execute(
+                    "INSERT INTO inventory_transactions "
+                    "(transaction_number,transaction_type,transaction_date,reference_number,office_id,item_id,"
+                    "quantity,quantity_requested,unit_cost,total_cost,remarks,created_by,status) "
+                    "VALUES (%s,'ISSUE',CURDATE(),%s,%s,%s,%s,%s,%s,%s,%s,%s,'Pending')",
+                    (txn_no, ref, office_id, item_id, quantity_requested, quantity_requested,
+                     item['unit_cost'], total_cost, remarks, user_id),
+                )
+>>>>>>> 1447a2c3d451fb1cfde2dc017c5a03dc9706bdda
             conn.commit()
         except Exception as e:
             conn.rollback()
@@ -640,7 +673,12 @@ def issue_items():
         transactions = cur.fetchall()
         cur.execute("SELECT id,office_name FROM offices WHERE status='Active' ORDER BY office_name")
         offices = cur.fetchall()
-        cur.execute("SELECT id,item_code,item_name,quantity_on_hand,unit FROM items WHERE status='Active' ORDER BY item_name")
+        cur.execute(
+            "SELECT id,item_code,item_name,quantity_on_hand,unit "
+            "FROM items "
+            "WHERE status='Active' AND (office_id IS NULL OR office_id=0) "
+            "ORDER BY item_name"
+        )
         items = cur.fetchall()
     conn.close()
 
@@ -675,14 +713,15 @@ def receive_items():
                     raise Exception('Item not found')
 
                 ref = f"RCV-{datetime.now():%Y%m%d}-{random.randint(1,9999):04d}"
+                txn_no = f"TXN-{datetime.now():%Y%m%d%H%M%S%f}-{random.randint(100,999)}"
                 total_cost = quantity * unit_cost
                 user_id = session.get('user_id', 1)
                 cur.execute(
                     "INSERT INTO inventory_transactions "
-                    "(transaction_type,transaction_date,reference_number,item_id,"
+                    "(transaction_number,transaction_type,transaction_date,reference_number,item_id,"
                     "quantity,unit_cost,total_cost,remarks,created_by,processed_by,status) "
-                    "VALUES ('RECEIVE',CURDATE(),%s,%s,%s,%s,%s,%s,%s,%s,'Completed')",
-                    (ref, item_id, quantity, unit_cost, total_cost, remarks, user_id, user_id),
+                    "VALUES (%s,'RECEIVE',CURDATE(),%s,%s,%s,%s,%s,%s,%s,%s,'Completed')",
+                    (txn_no, ref, item_id, quantity, unit_cost, total_cost, remarks, user_id, user_id),
                 )
                 new_qty = item['quantity_on_hand'] + quantity
                 cur.execute(
@@ -771,20 +810,28 @@ def process_transactions():
                 elif action == 'complete':
                     # Get transaction details including office_id and quantity_approved
                     cur.execute(
-                        "SELECT item_id, quantity, quantity_approved, transaction_type, office_id "
+                        "SELECT item_id, quantity, quantity_requested, quantity_approved, transaction_type, office_id "
                         "FROM inventory_transactions WHERE id=%s", 
                         (tid,)
                     )
                     trans = cur.fetchone()
+                    if not trans:
+                        raise Exception('Transaction not found')
+
+                    completed_qty = int(trans.get('quantity') or 0)
                     
-                    if trans and trans['transaction_type'] == 'ISSUE':
-                        # Use quantity_approved (or fall back to quantity if null)
-                        qty_to_issue = trans.get('quantity_approved') or trans['quantity']
+                    if trans['transaction_type'] == 'ISSUE':
+                        # For legacy rows, quantity can be 0 while requested/approved is set.
+                        qty_to_issue = trans.get('quantity_approved') or trans.get('quantity') or trans.get('quantity_requested') or 0
+                        qty_to_issue = int(qty_to_issue)
+                        if qty_to_issue <= 0:
+                            raise Exception('Cannot complete issue transaction with zero quantity')
+                        completed_qty = qty_to_issue
                         
                         # 1. Verify warehouse has the item
                         cur.execute(
                             "SELECT quantity_on_hand FROM items "
-                            "WHERE id=%s AND (office_id IS NULL OR office_id = '')",
+                            "WHERE id=%s AND (office_id IS NULL OR office_id=0)",
                             (trans['item_id'],)
                         )
                         warehouse_item = cur.fetchone()
@@ -812,8 +859,8 @@ def process_transactions():
                     
                     # Mark transaction as completed
                     cur.execute(
-                        "UPDATE inventory_transactions SET status='Completed', processed_by=%s, updated_at=NOW() WHERE id=%s", 
-                        (user_id, tid)
+                        "UPDATE inventory_transactions SET status='Completed', quantity=%s, processed_by=%s, updated_at=NOW() WHERE id=%s", 
+                        (completed_qty, user_id, tid)
                     )
                     flash('Transaction completed successfully! Items transferred to office.', 'success')
 
@@ -830,6 +877,8 @@ def process_transactions():
 
     status_filter = request.args.get('status', 'all')
     type_filter = request.args.get('type', 'all')
+    if type_filter != 'all':
+        type_filter = type_filter.upper()
 
     query = (
         "SELECT it.*,o.office_name,i.item_name,i.item_code,i.quantity_on_hand,"
