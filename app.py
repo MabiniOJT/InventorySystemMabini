@@ -496,12 +496,15 @@ def export_items():
 def issue_items():
     conn = get_db()
 
-    if request.method == 'POST' and request.form.get('action'):
-        action = request.form.get('action')
-        user_id = session.get('user_id', 1)
-
+    if request.method == 'POST' and request.form.get('action') == 'create_issue':
         try:
+            item_id = request.form['item_id']
+            office_id = request.form['office_id']
+            quantity_requested = int(request.form['quantity_requested'])
+            remarks = request.form.get('remarks', '')
+
             with conn.cursor() as cur:
+<<<<<<< HEAD
                 if action == 'create_issue':
                     item_id = request.form['item_id']
                     office_id = request.form['office_id']
@@ -621,18 +624,47 @@ def issue_items():
                 else:
                     raise Exception('Invalid action')
 
+=======
+                cur.execute(
+                    "SELECT item_code,item_name,quantity_on_hand,unit_cost,office_id "
+                    "FROM items WHERE id=%s",
+                    (item_id,)
+                )
+                item = cur.fetchone()
+                if not item:
+                    raise Exception('Item not found')
+                if item.get('office_id') not in (None, 0):
+                    raise Exception('Selected item is office-assigned. Please choose a warehouse item.')
+                # Don't block if insufficient - supervisor will approve what's available
+                # Just warn in flash message
+                stock_warning = ''
+                if item['quantity_on_hand'] < quantity_requested:
+                    stock_warning = f" (Note: Only {item['quantity_on_hand']} available in stock)"
+
+                ref = f"ISS-{datetime.now():%Y%m%d}-{random.randint(1,9999):04d}"
+                txn_no = f"TXN-{datetime.now():%Y%m%d%H%M%S%f}-{random.randint(100,999)}"
+                total_cost = quantity_requested * float(item['unit_cost'])
+                user_id = session.get('user_id', 1)
+                cur.execute(
+                    "INSERT INTO inventory_transactions "
+                    "(transaction_number,transaction_type,transaction_date,reference_number,office_id,item_id,"
+                    "quantity,quantity_requested,unit_cost,total_cost,remarks,created_by,status) "
+                    "VALUES (%s,'ISSUE',CURDATE(),%s,%s,%s,%s,%s,%s,%s,%s,%s,'Pending')",
+                    (txn_no, ref, office_id, item_id, quantity_requested, quantity_requested,
+                     item['unit_cost'], total_cost, remarks, user_id),
+                )
+>>>>>>> 5938f7e7c272e1411a5ffe1a94a86d54b7cb137b
             conn.commit()
+            flash(f"Issue request created successfully! Reference: {ref}{stock_warning}", 'success')
         except Exception as e:
             conn.rollback()
             flash(f"Error: {e}", 'error')
-
         conn.close()
         return redirect(url_for('issue_items'))
 
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT it.*,o.office_name,i.item_name,i.item_code,i.quantity_on_hand,"
-            "u.full_name as processed_by_name "
+            "SELECT it.*,o.office_name,i.item_name,i.item_code,u.full_name as processed_by_name "
             "FROM inventory_transactions it "
             "LEFT JOIN offices o ON it.office_id=o.id "
             "LEFT JOIN items i ON it.item_id=i.id "
@@ -936,44 +968,49 @@ def offices():
 @app.route('/offices/items/<int:office_id>')
 @login_required
 def office_items(office_id):
-    """Return items currently assigned to an office."""
+    """
+    Show items issued to an office by querying completed Issue transactions.
+    Each row represents an issue transaction (not aggregated, so you can see history).
+    """
     conn = get_db()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT i.item_code, i.item_name, c.category_name, o.office_name,
-                       i.unit, i.quantity_on_hand, i.unit_cost, i.date_acquired
-                FROM items i
-                LEFT JOIN categories c ON i.category_id = c.id
-                LEFT JOIN offices o ON i.office_id = o.id
-                WHERE i.office_id = %s
-                ORDER BY i.item_code
-                """,
-                (office_id,),
-            )
-            items = cur.fetchall()
-
-        result = []
-        for item in items:
-            qty = float(item.get('quantity_on_hand', 0) or 0)
-            cost = float(item.get('unit_cost', 0) or 0)
-            result.append({
-                'item_code': item.get('item_code', ''),
-                'item_name': item.get('item_name', ''),
-                'category_name': item.get('category_name', ''),
-                'office_name': item.get('office_name', ''),
-                'unit': item.get('unit', ''),
-                'quantity_on_hand': qty,
-                'unit_cost': cost,
-                'total_cost': round(qty * cost, 2),
-                'date_acquired': str(item['date_acquired']) if item.get('date_acquired') else '',
-            })
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    finally:
-        conn.close()
+    with conn.cursor() as cur:
+        # Query completed Issue transactions for this office
+        cur.execute("""
+            SELECT i.item_code, i.item_name, c.category_name, o.office_name,
+                   i.unit, 
+                   COALESCE(it.quantity_approved, it.quantity) as quantity_issued,
+                   i.unit_cost, 
+                   it.updated_at as date_issued,
+                   it.reference_number
+            FROM inventory_transactions it
+            INNER JOIN items i ON it.item_id = i.id
+            LEFT JOIN categories c ON i.category_id = c.id
+            LEFT JOIN offices o ON it.office_id = o.id
+            WHERE it.office_id = %s 
+              AND it.transaction_type = 'ISSUE' 
+              AND it.status = 'Completed'
+            ORDER BY it.updated_at DESC, i.item_code
+        """, (office_id,))
+        transactions = cur.fetchall()
+    conn.close()
+    
+    result = []
+    for trans in transactions:
+        qty = float(trans.get('quantity_issued', 0) or 0)
+        cost = float(trans.get('unit_cost', 0) or 0)
+        result.append({
+            'item_code': trans.get('item_code', ''),
+            'item_name': trans.get('item_name', ''),
+            'category_name': trans.get('category_name', ''),
+            'office_name': trans.get('office_name', ''),
+            'unit': trans.get('unit', ''),
+            'quantity_on_hand': qty,  # Keep same field name for frontend compatibility
+            'unit_cost': cost,
+            'total_cost': round(qty * cost, 2),
+            'date_acquired': str(trans['date_issued']) if trans.get('date_issued') else '',
+            'reference': trans.get('reference_number', '')
+        })
+    return jsonify(result)
 
 
 @app.route('/offices/export/<int:office_id>')

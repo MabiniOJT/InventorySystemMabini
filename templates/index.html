@@ -4,10 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - GSO Inventory System</title>
+    <script>
+        (function () {
+            var savedTheme = localStorage.getItem('theme');
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .theme-toggle-login { position: fixed; top: 16px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.15); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; backdrop-filter: blur(6px); }
+        .theme-toggle-login:hover { background: rgba(255,255,255,0.22); }
         .login-container { width: 100%; max-width: 450px; animation: fadeIn 0.5s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         .login-box { background: #ffffff; border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); padding: 40px; }
@@ -34,10 +44,25 @@
         .form-footer { text-align: center; margin-top: 20px; }
         .forgot-password { color: #2196F3; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s ease; }
         .forgot-password:hover { color: #4CAF50; text-decoration: underline; }
+        [data-theme="dark"] body { background: linear-gradient(135deg, #11314a 0%, #16293f 100%); }
+        [data-theme="dark"] .login-box { background: #18222d; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55); }
+        [data-theme="dark"] .login-header h1 { color: #e4edf6; }
+        [data-theme="dark"] .login-header p { color: #b7c6d6; }
+        [data-theme="dark"] .form-group label { color: #d6e2ee; }
+        [data-theme="dark"] .form-group input[type="email"],
+        [data-theme="dark"] .form-group input[type="password"] { background-color: #233140; border-color: #314456; color: #e4edf6; }
+        [data-theme="dark"] .form-group input[type="email"]:focus,
+        [data-theme="dark"] .form-group input[type="password"]:focus { background-color: #18222d; }
+        [data-theme="dark"] .checkbox-label { color: #b7c6d6; }
+        [data-theme="dark"] .forgot-password { color: #7db9f2; }
+        [data-theme="dark"] .forgot-password:hover { color: #8ad8a0; }
+        [data-theme="dark"] .theme-toggle-login { border-color: rgba(154, 186, 215, 0.35); background: rgba(10, 22, 34, 0.55); }
+        [data-theme="dark"] .theme-toggle-login:hover { background: rgba(12, 29, 44, 0.75); }
         @media (max-width: 480px) { .login-box { padding: 30px 25px; } .login-header h1 { font-size: 24px; } .btn-login { padding: 12px; font-size: 15px; } }
     </style>
 </head>
 <body>
+    <button id="theme-toggle-login" class="theme-toggle-login" type="button" aria-label="Toggle theme" title="Toggle theme">🌙</button>
     <div class="login-container">
         <div class="login-box">
             <div class="logo-container">
@@ -90,5 +115,29 @@
             </div>
         </div>
     </div>
+
+    <script>
+        (function () {
+            var toggle = document.getElementById('theme-toggle-login');
+            if (!toggle) return;
+
+            function syncIcon() {
+                var current = document.documentElement.getAttribute('data-theme') || 'light';
+                toggle.textContent = current === 'dark' ? '☀' : '🌙';
+                toggle.setAttribute('title', current === 'dark' ? 'Light mode' : 'Dark mode');
+                toggle.setAttribute('aria-label', current === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+            }
+
+            toggle.addEventListener('click', function () {
+                var current = document.documentElement.getAttribute('data-theme') || 'light';
+                var next = current === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+                syncIcon();
+            });
+
+            syncIcon();
+        })();
+    </script>
 </body>
 </html>
