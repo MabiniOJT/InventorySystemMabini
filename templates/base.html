@@ -1,149 +1,153 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}GSO Inventory System{% endblock %}</title>
-    <script>
-        (function () {
-            var storedTheme = localStorage.getItem('theme');
-            var systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var theme = storedTheme || (systemPrefersDark ? 'dark' : 'light');
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    {% block extra_css %}{% endblock %}
-    <style>
-        [data-theme="dark"] .content,
-        [data-theme="dark"] .content-header h1,
-        [data-theme="dark"] .section-header h2,
-        [data-theme="dark"] .modal-header h2,
-        [data-theme="dark"] .transaction-ref,
-        [data-theme="dark"] .detail-value,
-        [data-theme="dark"] .item-name,
-        [data-theme="dark"] .report-card .value,
-        [data-theme="dark"] .stat-card .value,
-        [data-theme="dark"] .stat-card .number,
-        [data-theme="dark"] .empty-state h3,
-        [data-theme="dark"] h2[style*="color: #333"],
-        [data-theme="dark"] h1[style*="color: #333"],
-        [data-theme="dark"] h3[style*="color: #333"] {
-            color: var(--text-main) !important;
-        }
 
-        [data-theme="dark"] .transaction-details,
-        [data-theme="dark"] .detail-label,
-        [data-theme="dark"] .stat-card h3,
-        [data-theme="dark"] .empty-state,
-        [data-theme="dark"] .empty-state p,
-        [data-theme="dark"] .report-card p,
-        [data-theme="dark"] .report-section h3,
-        [data-theme="dark"] .content *[style*="color: #666"],
-        [data-theme="dark"] .content *[style*="color:#666"],
-        [data-theme="dark"] .content *[style*="color: #999"],
-        [data-theme="dark"] .content *[style*="color:#999"] {
-            color: var(--text-muted) !important;
-        }
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}GSO Inventory System{% endblock %}</title>
+        <script>
+            (function () {
+                var storedTheme = localStorage.getItem('theme');
+                var systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var theme = storedTheme || (systemPrefersDark ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            })();
+        </script>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+        {% block extra_css %}{% endblock %}
+        <style>
+            [data-theme="dark"] .content,
+            [data-theme="dark"] .content-header h1,
+            [data-theme="dark"] .section-header h2,
+            [data-theme="dark"] .modal-header h2,
+            [data-theme="dark"] .transaction-ref,
+            [data-theme="dark"] .detail-value,
+            [data-theme="dark"] .item-name,
+            [data-theme="dark"] .report-card .value,
+            [data-theme="dark"] .stat-card .value,
+            [data-theme="dark"] .stat-card .number,
+            [data-theme="dark"] .empty-state h3,
+            [data-theme="dark"] h2[style*="color: #333"],
+            [data-theme="dark"] h1[style*="color: #333"],
+            [data-theme="dark"] h3[style*="color: #333"] {
+                color: var(--text-main) !important;
+            }
 
-        [data-theme="dark"] .stat-card,
-        [data-theme="dark"] .report-card,
-        [data-theme="dark"] .report-section,
-        [data-theme="dark"] .filter-section,
-        [data-theme="dark"] .filter-bar,
-        [data-theme="dark"] .table-container,
-        [data-theme="dark"] .transaction-card,
-        [data-theme="dark"] .reorder-card,
-        [data-theme="dark"] .content-section,
-        [data-theme="dark"] .modal-content,
-        [data-theme="dark"] .office-card {
-            background: var(--bg-surface) !important;
-            box-shadow: var(--shadow-soft) !important;
-            border-color: var(--border-color) !important;
-        }
+            [data-theme="dark"] .transaction-details,
+            [data-theme="dark"] .detail-label,
+            [data-theme="dark"] .stat-card h3,
+            [data-theme="dark"] .empty-state,
+            [data-theme="dark"] .empty-state p,
+            [data-theme="dark"] .report-card p,
+            [data-theme="dark"] .report-section h3,
+            [data-theme="dark"] .content *[style*="color: #666"],
+            [data-theme="dark"] .content *[style*="color:#666"],
+            [data-theme="dark"] .content *[style*="color: #999"],
+            [data-theme="dark"] .content *[style*="color:#999"] {
+                color: var(--text-muted) !important;
+            }
 
-        [data-theme="dark"] .stock-indicator,
-        [data-theme="dark"] .supplier-info,
-        [data-theme="dark"] .stock-warning,
-        [data-theme="dark"] .content *[style*="background: #f8f9fa"],
-        [data-theme="dark"] .content *[style*="background-color: #f8f9fa"],
-        [data-theme="dark"] .content *[style*="background: #f9fafb"],
-        [data-theme="dark"] .content *[style*="background-color: #f9fafb"] {
-            background: var(--bg-soft) !important;
-            color: var(--text-muted) !important;
-        }
+            [data-theme="dark"] .stat-card,
+            [data-theme="dark"] .report-card,
+            [data-theme="dark"] .report-section,
+            [data-theme="dark"] .filter-section,
+            [data-theme="dark"] .filter-bar,
+            [data-theme="dark"] .table-container,
+            [data-theme="dark"] .transaction-card,
+            [data-theme="dark"] .reorder-card,
+            [data-theme="dark"] .content-section,
+            [data-theme="dark"] .modal-content,
+            [data-theme="dark"] .office-card {
+                background: var(--bg-surface) !important;
+                box-shadow: var(--shadow-soft) !important;
+                border-color: var(--border-color) !important;
+            }
 
-        [data-theme="dark"] .content *[style*="background: white"],
-        [data-theme="dark"] .content *[style*="background: #fff"],
-        [data-theme="dark"] .content *[style*="background-color: white"],
-        [data-theme="dark"] .content *[style*="background-color: #fff"] {
-            background: var(--bg-surface) !important;
-        }
+            [data-theme="dark"] .stock-indicator,
+            [data-theme="dark"] .supplier-info,
+            [data-theme="dark"] .stock-warning,
+            [data-theme="dark"] .content *[style*="background: #f8f9fa"],
+            [data-theme="dark"] .content *[style*="background-color: #f8f9fa"],
+            [data-theme="dark"] .content *[style*="background: #f9fafb"],
+            [data-theme="dark"] .content *[style*="background-color: #f9fafb"] {
+                background: var(--bg-soft) !important;
+                color: var(--text-muted) !important;
+            }
 
-        [data-theme="dark"] table th,
-        [data-theme="dark"] table td,
-        [data-theme="dark"] .content *[style*="border: 1px solid #ddd"],
-        [data-theme="dark"] .content *[style*="border-bottom: 2px solid #f0f0f0"],
-        [data-theme="dark"] .content *[style*="border-bottom: 1px solid #f0f0f0"] {
-            border-color: var(--border-color) !important;
-        }
+            [data-theme="dark"] .content *[style*="background: white"],
+            [data-theme="dark"] .content *[style*="background: #fff"],
+            [data-theme="dark"] .content *[style*="background-color: white"],
+            [data-theme="dark"] .content *[style*="background-color: #fff"] {
+                background: var(--bg-surface) !important;
+            }
 
-        [data-theme="dark"] input,
-        [data-theme="dark"] select,
-        [data-theme="dark"] textarea {
-            background: var(--bg-soft) !important;
-            color: var(--text-main) !important;
-            border-color: var(--border-color) !important;
-        }
+            [data-theme="dark"] table th,
+            [data-theme="dark"] table td,
+            [data-theme="dark"] .content *[style*="border: 1px solid #ddd"],
+            [data-theme="dark"] .content *[style*="border-bottom: 2px solid #f0f0f0"],
+            [data-theme="dark"] .content *[style*="border-bottom: 1px solid #f0f0f0"] {
+                border-color: var(--border-color) !important;
+            }
 
-        [data-theme="dark"] input::placeholder,
-        [data-theme="dark"] textarea::placeholder {
-            color: var(--text-subtle) !important;
-        }
-    </style>
-</head>
-<body>
-    {% include 'includes/sidebar.html' %}
-    
-    <div class="main-content">
-        {% include 'includes/navbar.html' %}
-        
-        <div class="content">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
+            [data-theme="dark"] input,
+            [data-theme="dark"] select,
+            [data-theme="dark"] textarea {
+                background: var(--bg-soft) !important;
+                color: var(--text-main) !important;
+                border-color: var(--border-color) !important;
+            }
+
+            [data-theme="dark"] input::placeholder,
+            [data-theme="dark"] textarea::placeholder {
+                color: var(--text-subtle) !important;
+            }
+        </style>
+    </head>
+
+    <body>
+        {% include 'includes/sidebar.html' %}
+
+        <div class="main-content">
+            {% include 'includes/navbar.html' %}
+
+            <div class="content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
                 {% for cat, msg in messages %}
                 <div class="alert alert-{{ 'success' if cat == 'success' else 'error' }}">
                     {{ msg }}
                 </div>
                 {% endfor %}
-            {% endif %}
-            {% endwith %}
-            
-            {% block content %}{% endblock %}
+                {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
         </div>
-    </div>
 
-    <script>
-        function updateThemeToggleIcon() {
-            var toggle = document.getElementById('theme-toggle');
-            if (!toggle) return;
-            var current = document.documentElement.getAttribute('data-theme') || 'light';
-            toggle.textContent = current === 'dark' ? '☀' : '🌙';
-            toggle.setAttribute('aria-label', current === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
-            toggle.setAttribute('title', current === 'dark' ? 'Light mode' : 'Dark mode');
-        }
+        <script>
+            function updateThemeToggleIcon() {
+                var toggle = document.getElementById('theme-toggle');
+                if (!toggle) return;
+                var current = document.documentElement.getAttribute('data-theme') || 'light';
+                toggle.textContent = current === 'dark' ? '☀' : '🌙';
+                toggle.setAttribute('aria-label', current === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+                toggle.setAttribute('title', current === 'dark' ? 'Light mode' : 'Dark mode');
+            }
 
-        function toggleTheme() {
-            var current = document.documentElement.getAttribute('data-theme') || 'light';
-            var next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-            updateThemeToggleIcon();
-        }
+            function toggleTheme() {
+                var current = document.documentElement.getAttribute('data-theme') || 'light';
+                var next = current === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+                updateThemeToggleIcon();
+            }
 
-        document.addEventListener('DOMContentLoaded', updateThemeToggleIcon);
-    </script>
-    {% block scripts %}{% endblock %}
-</body>
+            document.addEventListener('DOMContentLoaded', updateThemeToggleIcon);
+        </script>
+        {% block scripts %}{% endblock %}
+    </body>
+
 </html>

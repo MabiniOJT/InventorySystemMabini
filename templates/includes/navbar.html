@@ -8,7 +8,8 @@
         <h1>{{ page_title | default('Dashboard') }}</h1>
     </div>
     <div class="user-info">
-        <button id="theme-toggle" class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle theme">🌙</button>
+        <button id="theme-toggle" class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Toggle theme"
+            title="Toggle theme">🌙</button>
         <div>
             <div class="user-name">{{ session.get('user', 'User') }}</div>
             <div class="user-email">{{ session.get('email', '') }}</div>
