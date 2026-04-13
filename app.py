@@ -504,6 +504,127 @@ def issue_items():
             remarks = request.form.get('remarks', '')
 
             with conn.cursor() as cur:
+<<<<<<< HEAD
+                if action == 'create_issue':
+                    item_id = request.form['item_id']
+                    office_id = request.form['office_id']
+                    quantity_requested = int(request.form['quantity_requested'])
+                    remarks = request.form.get('remarks', '')
+
+                    cur.execute("SELECT item_code,item_name,quantity_on_hand,unit_cost FROM items WHERE id=%s", (item_id,))
+                    item = cur.fetchone()
+                    if not item:
+                        raise Exception('Item not found')
+
+                    # Don't block if insufficient - supervisor will approve what's available.
+                    stock_warning = ''
+                    if item['quantity_on_hand'] < quantity_requested:
+                        stock_warning = f" (Note: Only {item['quantity_on_hand']} available in stock)"
+
+                    ref = f"ISS-{datetime.now():%Y%m%d}-{random.randint(1,9999):04d}"
+                    total_cost = quantity_requested * float(item['unit_cost'])
+                    cur.execute(
+                        "INSERT INTO inventory_transactions "
+                        "(transaction_type,transaction_date,reference_number,office_id,item_id,"
+                        "quantity,quantity_requested,unit_cost,total_cost,remarks,created_by,status) "
+                        "VALUES ('ISSUE',CURDATE(),%s,%s,%s,%s,%s,%s,%s,%s,%s,'Pending')",
+                        (
+                            ref,
+                            office_id,
+                            item_id,
+                            quantity_requested,
+                            quantity_requested,
+                            item['unit_cost'],
+                            total_cost,
+                            remarks,
+                            user_id,
+                        ),
+                    )
+                    flash(f"Issue request created successfully! Reference: {ref}{stock_warning}", 'success')
+
+                elif action == 'approve':
+                    tid = request.form.get('transaction_id')
+                    qty_approved_raw = request.form.get('quantity_approved')
+                    if not tid:
+                        raise Exception('Missing transaction id')
+
+                    if qty_approved_raw:
+                        qty_approved = int(qty_approved_raw)
+                        cur.execute(
+                            "UPDATE inventory_transactions SET status='Approved', "
+                            "quantity_approved=%s,quantity=%s,processed_by=%s,updated_at=NOW() "
+                            "WHERE id=%s AND transaction_type='ISSUE'",
+                            (qty_approved, qty_approved, user_id, tid),
+                        )
+                        flash(f'Transaction approved with {qty_approved} units!', 'success')
+                    else:
+                        cur.execute(
+                            "UPDATE inventory_transactions SET status='Approved', "
+                            "processed_by=%s,updated_at=NOW() "
+                            "WHERE id=%s AND transaction_type='ISSUE'",
+                            (user_id, tid),
+                        )
+                        flash('Transaction approved successfully!', 'success')
+
+                elif action == 'complete':
+                    tid = request.form.get('transaction_id')
+                    if not tid:
+                        raise Exception('Missing transaction id')
+
+                    cur.execute(
+                        "SELECT item_id, quantity, quantity_approved, transaction_type, status "
+                        "FROM inventory_transactions WHERE id=%s",
+                        (tid,),
+                    )
+                    trans = cur.fetchone()
+                    if not trans or trans['transaction_type'] != 'ISSUE':
+                        raise Exception('Issue transaction not found')
+                    if trans['status'] != 'Approved':
+                        raise Exception('Only approved transactions can be completed')
+
+                    qty_to_issue = trans.get('quantity_approved') or trans['quantity']
+                    cur.execute("SELECT quantity_on_hand FROM items WHERE id=%s", (trans['item_id'],))
+                    item = cur.fetchone()
+                    if not item:
+                        raise Exception('Source item not found in warehouse')
+                    if item['quantity_on_hand'] < qty_to_issue:
+                        raise Exception('Insufficient stock to complete this transaction')
+
+                    cur.execute(
+                        "UPDATE items SET quantity_on_hand=quantity_on_hand-%s, updated_at=NOW() "
+                        "WHERE id=%s",
+                        (qty_to_issue, trans['item_id']),
+                    )
+                    cur.execute("SELECT quantity_on_hand FROM items WHERE id=%s", (trans['item_id'],))
+                    new_bal = cur.fetchone()['quantity_on_hand']
+                    cur.execute(
+                        "INSERT INTO stock_movements "
+                        "(item_id, transaction_id, movement_type, quantity, balance_after, created_by) "
+                        "VALUES (%s, %s, 'OUT', %s, %s, %s)",
+                        (trans['item_id'], tid, qty_to_issue, new_bal, user_id),
+                    )
+                    cur.execute(
+                        "UPDATE inventory_transactions SET status='Completed', processed_by=%s, updated_at=NOW() "
+                        "WHERE id=%s",
+                        (user_id, tid),
+                    )
+                    flash('Transaction completed successfully! Items transferred to office.', 'success')
+
+                elif action == 'cancel':
+                    tid = request.form.get('transaction_id')
+                    if not tid:
+                        raise Exception('Missing transaction id')
+                    cur.execute(
+                        "UPDATE inventory_transactions SET status='Cancelled', processed_by=%s, updated_at=NOW() "
+                        "WHERE id=%s AND transaction_type='ISSUE'",
+                        (user_id, tid),
+                    )
+                    flash('Transaction cancelled', 'success')
+
+                else:
+                    raise Exception('Invalid action')
+
+=======
                 cur.execute(
                     "SELECT item_code,item_name,quantity_on_hand,unit_cost,office_id "
                     "FROM items WHERE id=%s",
@@ -532,6 +653,7 @@ def issue_items():
                     (txn_no, ref, office_id, item_id, quantity_requested, quantity_requested,
                      item['unit_cost'], total_cost, remarks, user_id),
                 )
+>>>>>>> 5938f7e7c272e1411a5ffe1a94a86d54b7cb137b
             conn.commit()
             flash(f"Issue request created successfully! Reference: {ref}{stock_warning}", 'success')
         except Exception as e:
@@ -1198,3 +1320,4 @@ def quantity_issued():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
