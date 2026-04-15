@@ -1,0 +1,191 @@
+{% set active_page = 'log-transaction' %}
+{% set page_title = 'Log Transaction' %}
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="transaction-form-container">
+    <h1>Log Transaction</h1>
+    <p class="subtitle">Quickly log inventory movements (Issue, Receive, Adjustment, or Return)</p>
+    
+    <form method="post" class="transaction-form">
+        <div class="form-section">
+            <h3>Transaction Details</h3>
+            
+            <div class="form-group">
+                <label for="transaction_type">Transaction Type *</label>
+                <select name="transaction_type" id="transaction_type" required class="form-select">
+                    <option value="">-- Select Type --</option>
+                    <option value="ISSUE">📤 Issue (Send to Office)</option>
+                    <option value="RECEIVE">📥 Receive (New Stock)</option>
+                    <option value="ADJUSTMENT">🔧 Adjustment (Correction)</option>
+                    <option value="RETURN">↩️ Return (From Office)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="item_id">Item *</label>
+                <select name="item_id" id="item_id" required class="form-select">
+                    <option value="">-- Select Item --</option>
+                    {% for item in items %}
+                        <option value="{{ item.id }}" data-qty="{{ item.quantity_on_hand }}">
+                            {{ item.item_code }} - {{ item.item_name }} (Available: {{ item.quantity_on_hand }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="quantity">Quantity *</label>
+                <input type="number" name="quantity" id="quantity" required min="1" class="form-input" placeholder="Enter quantity">
+                <small id="stock-warning" class="warning-text"></small>
+            </div>
+            
+            <div class="form-group">
+                <label for="office_id">Office/Department (if applicable)</label>
+                <select name="office_id" id="office_id" class="form-select">
+                    <option value="">-- Not Applicable --</option>
+                    {% for office in offices %}
+                        <option value="{{ office.id }}">{{ office.office_name }}</option>
+                    {% endfor %}
+                </select>
+                <small class="help-text">Select the destination for ISSUE/RETURN or source for RECEIVE</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="remarks">Remarks</label>
+                <textarea name="remarks" id="remarks" class="form-textarea" rows="3" placeholder="Optional notes about this transaction..."></textarea>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success btn-lg">
+                ✓ Log Transaction
+            </button>
+            <a href="{{ url_for('transaction_history') }}" class="btn btn-secondary btn-lg">
+                View History
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.transaction-form-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+    font-size: 14px;
+}
+
+.form-section {
+    background: var(--bg-secondary);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.form-section h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+}
+
+.help-text {
+    color: var(--text-secondary);
+}
+
+.warning-text {
+    color: #ff9800;
+    font-weight: bold;
+}
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn-lg {
+    padding: 12px 30px;
+    font-size: 16px;
+    min-width: 150px;
+}
+
+.btn-success {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-success:hover {
+    background-color: #45a049;
+}
+
+.btn-secondary {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--primary-color);
+}
+</style>
+
+<script>
+document.getElementById('item_id').addEventListener('change', function() {
+    const selected = this.options[this.selectedIndex];
+    const availableQty = parseInt(selected.dataset.qty) || 0;
+    const warning = document.getElementById('stock-warning');
+    const transType = document.getElementById('transaction_type').value;
+    
+    if (transType === 'ISSUE') {
+        if (availableQty > 0) {
+            warning.textContent = `Available: ${availableQty} units`;
+            warning.style.color = '#4CAF50';
+        } else {
+            warning.textContent = '⚠️ Out of stock!';
+            warning.style.color = '#ff4444';
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% set active_page = 'inventory' %}
+{% set page_title = 'Inventory Status' %}
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="inventory-header">
+    <h1>Inventory Status</h1>
+    
+    <div class="filter-controls">
+        <form method="get" class="search-form">
+            <input type="text" name="search" placeholder="Search item code or name..." value="{{ search }}" class="search-input">
+            
+            <select name="category" class="filter-select">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if cat.id|string == category_filter %}selected{% endif %}>{{ cat.category_name }}</option>
+                {% endfor %}
+            </select>
+            
+            <label class="checkbox-label">
+                <input type="checkbox" name="low_stock" value="yes" {% if low_stock_only %}checked{% endif %}>
+                Low Stock Only
+            </label>
+            
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="{{ url_for('inventory') }}" class="btn btn-secondary">Clear</a>
+        </form>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Item Code</th>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Unit</th>
+                <th>On Hand</th>
+                <th>Reorder Level</th>
+                <th>Unit Cost</th>
+                <th>Total Value</th>
+                <th>Status</th>
+                <th>Last Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr class="status-{{ item.stock_status.lower().replace(' ', '-') }}">
+                <td><strong>{{ item.item_code }}</strong></td>
+                <td>{{ item.item_name }}</td>
+                <td>{{ item.category_name or 'N/A' }}</td>
+                <td>{{ item.unit }}</td>
+                <td class="text-center">
+                    <span class="qty-badge {% if item.quantity_on_hand == 0 %}critical{% elif item.quantity_on_hand <= item.reorder_level %}warning{% else %}normal{% endif %}">
+                        {{ item.quantity_on_hand }}
+                    </span>
+                </td>
+                <td class="text-center">{{ item.reorder_level }}</td>
+                <td class="text-right">₱{{ item.unit_cost|number_format(2) }}</td>
+                <td class="text-right">₱{{ item.total_value|number_format(2) }}</td>
+                <td>
+                    {% if item.stock_status == 'Out of Stock' %}
+                        <span class="status-badge critical">Out of Stock</span>
+                    {% elif item.stock_status == 'Low Stock' %}
+                        <span class="status-badge warning">⚠️ Low Stock</span>
+                    {% else %}
+                        <span class="status-badge available">Available</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.updated_at|date_format('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="10" class="text-center">No items found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+.inventory-header {
+    margin-bottom: 20px;
+}
+
+.filter-controls {
+    background: var(--bg-secondary);
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.search-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.search-input, .filter-select {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 200px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.checkbox-label input {
+    cursor: pointer;
+}
+
+.qty-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.qty-badge.critical {
+    background-color: #ff4444;
+    color: white;
+}
+
+.qty-badge.warning {
+    background-color: #ff9800;
+    color: white;
+}
+
+.qty-badge.normal {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-badge.critical {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.status-badge.warning {
+    background-color: #fff3e0;
+    color: #e65100;
+}
+
+.status-badge.available {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+</style>
+{% endblock %}

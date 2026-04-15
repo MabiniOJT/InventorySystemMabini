@@ -104,11 +104,12 @@ CREATE TABLE items (
     INDEX idx_expiration_date (expiration_date)
 ) ENGINE=InnoDB;
 
--- Inventory Transactions table
+-- Inventory Transactions table (simplified for immediate logging)
 CREATE TABLE inventory_transactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     transaction_type ENUM('Issue', 'Receive', 'Adjustment', 'Return') NOT NULL,
     transaction_date DATE NOT NULL,
+    transaction_time TIME,
     reference_number VARCHAR(50) UNIQUE NOT NULL,
     office_id INT,
     item_id INT NOT NULL,
@@ -116,17 +117,17 @@ CREATE TABLE inventory_transactions (
     unit_cost DECIMAL(10,2),
     total_cost DECIMAL(10,2),
     remarks TEXT,
-    processed_by INT,
-    status ENUM('Pending', 'Approved', 'Completed', 'Cancelled') DEFAULT 'Pending',
+    created_by INT NOT NULL COMMENT 'User who logged the transaction',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE SET NULL,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
-    FOREIGN KEY (processed_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
     INDEX idx_transaction_type (transaction_type),
     INDEX idx_transaction_date (transaction_date),
     INDEX idx_reference (reference_number),
-    INDEX idx_status (status)
+    INDEX idx_item (item_id),
+    INDEX idx_created_by (created_by)
 ) ENGINE=InnoDB;
 
 -- Stock Movements table (detailed log)
@@ -134,19 +135,40 @@ CREATE TABLE stock_movements (
     id INT AUTO_INCREMENT PRIMARY KEY,
     item_id INT NOT NULL,
     transaction_id INT,
-    movement_type ENUM('IN', 'OUT', 'ADJUST') NOT NULL,
+    movement_type ENUM('IN', 'OUT', 'ADJUST', 'TRANSFER') NOT NULL,
     quantity INT NOT NULL,
     balance_after INT NOT NULL,
+    from_office_id INT COMMENT 'Where item came from',
+    to_office_id INT COMMENT 'Where item went to',
     reference VARCHAR(100),
     remarks TEXT,
-    created_by INT,
+    created_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
     FOREIGN KEY (transaction_id) REFERENCES inventory_transactions(id) ON DELETE SET NULL,
+    FOREIGN KEY (from_office_id) REFERENCES offices(id) ON DELETE SET NULL,
+    FOREIGN KEY (to_office_id) REFERENCES offices(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_item (item_id),
     INDEX idx_movement_type (movement_type),
-    INDEX idx_created_at (created_at)
+    INDEX idx_created_at (created_at),
+    INDEX idx_from_office (from_office_id),
+    INDEX idx_to_office (to_office_id)
+) ENGINE=InnoDB;
+
+-- Item Office Distribution (tracks quantity of each item in each office)
+CREATE TABLE item_office_distribution (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    item_id INT NOT NULL,
+    office_id INT NOT NULL,
+    quantity_on_hand INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
+    FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_item_office (item_id, office_id),
+    INDEX idx_office (office_id),
+    INDEX idx_quantity (quantity_on_hand)
 ) ENGINE=InnoDB;
 
 -- Insert default admin user (password: password)

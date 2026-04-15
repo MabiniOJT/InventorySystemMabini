@@ -15,25 +15,21 @@
                 <span class="menu-icon">📦</span>
                 <span class="menu-text">Item Master List</span>
             </a>
-            <a href="{{ url_for('reorder_management') }}" class="menu-item {{ 'active' if active_page == 'reorder-management' else '' }}">
-                <span class="menu-icon">🔄</span>
-                <span class="menu-text">Reorder Management</span>
+            <a href="{{ url_for('inventory') }}" class="menu-item {{ 'active' if active_page == 'inventory' else '' }}">
+                <span class="menu-icon">📊</span>
+                <span class="menu-text">Inventory Status</span>
             </a>
         </div>
         
         <div class="menu-section">
             <div class="menu-section-title">Transactions</div>
-            <a href="{{ url_for('issue_items') }}" class="menu-item {{ 'active' if active_page == 'issue-items' else '' }}">
-                <span class="menu-icon">📤</span>
-                <span class="menu-text">Issue Items</span>
+            <a href="{{ url_for('log_transaction') }}" class="menu-item {{ 'active' if active_page == 'log-transaction' else '' }}">
+                <span class="menu-icon">✏️</span>
+                <span class="menu-text">Log Transaction</span>
             </a>
-            <a href="{{ url_for('receive_items') }}" class="menu-item {{ 'active' if active_page == 'receive-items' else '' }}">
-                <span class="menu-icon">📥</span>
-                <span class="menu-text">Receive Items</span>
-            </a>
-            <a href="{{ url_for('process_transactions') }}" class="menu-item {{ 'active' if active_page == 'process-transactions' else '' }}">
-                <span class="menu-icon">⚙️</span>
-                <span class="menu-text">Process Transactions</span>
+            <a href="{{ url_for('transaction_history') }}" class="menu-item {{ 'active' if active_page == 'transaction-history' else '' }}">
+                <span class="menu-icon">📋</span>
+                <span class="menu-text">Transaction History</span>
             </a>
         </div>
         
@@ -42,10 +38,6 @@
             <a href="{{ url_for('offices') }}" class="menu-item {{ 'active' if active_page == 'offices' else '' }}">
                 <span class="menu-icon">🏢</span>
                 <span class="menu-text">Offices</span>
-            </a>
-            <a href="{{ url_for('report') }}" class="menu-item {{ 'active' if active_page == 'report' else '' }}">
-                <span class="menu-icon">📄</span>
-                <span class="menu-text">Report</span>
             </a>
         </div>
     </div>
