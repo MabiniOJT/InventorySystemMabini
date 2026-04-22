@@ -8,10 +8,11 @@
             <span class="menu-icon">📊</span>
             <span class="menu-text">Dashboard</span>
         </a>
-        
+
         <div class="menu-section">
             <div class="menu-section-title">Inventory</div>
-            <a href="{{ url_for('item_master_list') }}" class="menu-item {{ 'active' if active_page == 'item-master-list' else '' }}">
+            <a href="{{ url_for('item_master_list') }}"
+                class="menu-item {{ 'active' if active_page == 'item-master-list' else '' }}">
                 <span class="menu-icon">📦</span>
                 <span class="menu-text">Item Master List</span>
             </a>
@@ -20,19 +21,21 @@
                 <span class="menu-text">Inventory Status</span>
             </a>
         </div>
-        
+
         <div class="menu-section">
             <div class="menu-section-title">Transactions</div>
-            <a href="{{ url_for('log_transaction') }}" class="menu-item {{ 'active' if active_page == 'log-transaction' else '' }}">
+            <a href="{{ url_for('log_transaction') }}"
+                class="menu-item {{ 'active' if active_page == 'log-transaction' else '' }}">
                 <span class="menu-icon">✏️</span>
                 <span class="menu-text">Log Transaction</span>
             </a>
-            <a href="{{ url_for('transaction_history') }}" class="menu-item {{ 'active' if active_page == 'transaction-history' else '' }}">
+            <a href="{{ url_for('transaction_history') }}"
+                class="menu-item {{ 'active' if active_page == 'transaction-history' else '' }}">
                 <span class="menu-icon">📋</span>
                 <span class="menu-text">Transaction History</span>
             </a>
         </div>
-        
+
         <div class="menu-section">
             <div class="menu-section-title">Setup</div>
             <a href="{{ url_for('offices') }}" class="menu-item {{ 'active' if active_page == 'offices' else '' }}">
@@ -44,30 +47,32 @@
 </div>
 
 <style>
-.menu-section {
-    margin: 20px 0;
-}
-.menu-section-title {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 10px 20px 5px 20px;
-    margin-top: 15px;
-}
-.menu-item {
-    margin: 2px 10px;
-}
+    .menu-section {
+        margin: 20px 0;
+    }
+
+    .menu-section-title {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 10px 20px 5px 20px;
+        margin-top: 15px;
+    }
+
+    .menu-item {
+        margin: 2px 10px;
+    }
 </style>
 
 <script>
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const mainContent = document.querySelector('.main-content');
-    const hamburger = document.querySelector('.hamburger-menu');
-    sidebar.classList.toggle('collapsed');
-    mainContent.classList.toggle('sidebar-collapsed');
-    hamburger.classList.toggle('active');
-}
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.querySelector('.main-content');
+        const hamburger = document.querySelector('.hamburger-menu');
+        sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('sidebar-collapsed');
+        hamburger.classList.toggle('active');
+    }
 </script>
