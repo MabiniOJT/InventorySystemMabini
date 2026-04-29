@@ -5,18 +5,27 @@
     </div>
     <div class="sidebar-menu">
         <a href="{{ url_for('dashboard') }}" class="menu-item {{ 'active' if active_page == 'dashboard' else '' }}">
-            <span class="menu-icon">📊</span>
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="2" x2="12" y2="22"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
             <span class="menu-text">Dashboard</span>
         </a>
         
         <div class="menu-section">
             <div class="menu-section-title">Inventory</div>
             <a href="{{ url_for('item_master_list') }}" class="menu-item {{ 'active' if active_page == 'item-master-list' else '' }}">
-                <span class="menu-icon">📦</span>
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"></path>
+                    <path d="M8 11h8M8 15h8"></path>
+                </svg>
                 <span class="menu-text">Item Master List</span>
             </a>
             <a href="{{ url_for('inventory') }}" class="menu-item {{ 'active' if active_page == 'inventory' else '' }}">
-                <span class="menu-icon">📊</span>
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="#9C27B0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5 12 3"></polyline>
+                    <polyline points="12 12 20 7.5M12 12 4 7.5M12 12 12 21"></polyline>
+                </svg>
                 <span class="menu-text">Inventory Status</span>
             </a>
         </div>
@@ -24,11 +33,17 @@
         <div class="menu-section">
             <div class="menu-section-title">Transactions</div>
             <a href="{{ url_for('log_transaction') }}" class="menu-item {{ 'active' if active_page == 'log-transaction' else '' }}">
-                <span class="menu-icon">✏️</span>
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="#00BCD4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    <path d="M7 7h10M7 11h10M7 15h4"></path>
+                </svg>
                 <span class="menu-text">Log Transaction</span>
             </a>
             <a href="{{ url_for('transaction_history') }}" class="menu-item {{ 'active' if active_page == 'transaction-history' else '' }}">
-                <span class="menu-icon">📋</span>
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="#FF1744" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                    <path d="M7 2v4m10 0V2M3 10h18"></path>
+                </svg>
                 <span class="menu-text">Transaction History</span>
             </a>
         </div>
@@ -36,7 +51,10 @@
         <div class="menu-section">
             <div class="menu-section-title">Setup</div>
             <a href="{{ url_for('offices') }}" class="menu-item {{ 'active' if active_page == 'offices' else '' }}">
-                <span class="menu-icon">🏢</span>
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="18" rx="2"></rect>
+                    <path d="M2 9h20M8 3v18M16 3v18"></path>
+                </svg>
                 <span class="menu-text">Offices</span>
             </a>
         </div>
@@ -48,11 +66,11 @@
     margin: 20px 0;
 }
 .menu-section-title {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 11px;
-    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.2px;
     padding: 10px 20px 5px 20px;
     margin-top: 15px;
 }

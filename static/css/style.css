@@ -49,7 +49,7 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: 260px;
-    background: var(--accent-gradient);
+    background: linear-gradient(180deg, #4CAF50 0%, #2d7a2f 100%);
     color: white;
     position: fixed;
     height: 100vh;
@@ -92,11 +92,13 @@ body {
 .sidebar-header h2 {
     font-size: 20px;
     margin-bottom: 5px;
+    color: white;
 }
 
 .sidebar-header p {
     font-size: 12px;
-    opacity: 0.8;
+    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .sidebar-menu {
@@ -113,22 +115,31 @@ body {
     color: white;
     text-decoration: none;
     border-left: 4px solid transparent;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
 }
 
 .menu-item:hover,
 .menu-item.active {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.2);
     border-left-color: white;
+    transform: translateX(5px);
 }
 
 .menu-item.active {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.25);
+    border-left-color: white;
 }
 
 .menu-icon {
-    font-size: 20px;
     width: 24px;
+    height: 24px;
     min-width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 /* Hamburger Menu */
@@ -267,6 +278,8 @@ body {
 .content {
     padding: 30px;
     flex: 1;
+    background: var(--bg-page);
+    min-height: calc(100vh - 120px);
 }
 
 .content-section {
