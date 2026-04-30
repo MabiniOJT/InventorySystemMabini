@@ -49,12 +49,13 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: 260px;
-    background: linear-gradient(180deg, #4CAF50 0%, #2d7a2f 100%);
-    color: white;
+    background: var(--bg-surface);
+    color: var(--text-main);
     position: fixed;
     height: 100vh;
     overflow-y: auto;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    border-right: 1px solid var(--border-soft);
     transition: all 0.3s ease;
     z-index: 999;
 }
@@ -80,7 +81,7 @@ body {
 
 .sidebar-header {
     padding: 25px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid var(--border-soft);
     transition: all 0.3s ease;
 }
 
@@ -92,13 +93,12 @@ body {
 .sidebar-header h2 {
     font-size: 20px;
     margin-bottom: 5px;
-    color: white;
+    color: var(--accent-green);
 }
 
 .sidebar-header p {
     font-size: 12px;
-    opacity: 0.9;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-subtle);
 }
 
 .sidebar-menu {
@@ -112,24 +112,25 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    color: white;
+    color: var(--text-muted);
     text-decoration: none;
     border-left: 4px solid transparent;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.3px;
 }
 
 .menu-item:hover,
 .menu-item.active {
-    background: rgba(255, 255, 255, 0.2);
-    border-left-color: white;
+    background: var(--bg-hover);
+    border-left-color: var(--accent-green);
+    color: var(--accent-green);
     transform: translateX(5px);
 }
 
 .menu-item.active {
-    background: rgba(255, 255, 255, 0.25);
-    border-left-color: white;
+    background: var(--bg-soft);
+    font-weight: 600;
 }
 
 .menu-icon {
@@ -419,7 +420,12 @@ table tr:hover {
     padding: 20px;
     border-radius: 10px;
     box-shadow: var(--shadow-soft);
+    border: 1px solid var(--border-soft);
     border-left: 4px solid var(--accent-green);
+}
+
+.stat-card.warning {
+    border-left-color: #f44336;
 }
 
 .stat-card h3 {
