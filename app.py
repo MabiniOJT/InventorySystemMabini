@@ -403,9 +403,9 @@ def transaction_history():
 
 # ---------- Item Management ----------
 
-@app.route('/items')
-@app.route('/item-master-list.php')
-@app.route('/item-master-list')
+@app.route('/items', methods=['GET', 'POST'])
+@app.route('/item-master-list.php', methods=['GET', 'POST'])
+@app.route('/item-master-list', methods=['GET', 'POST'])
 @login_required
 def item_master_list():
     """Manage items - add, edit, delete"""
@@ -546,8 +546,8 @@ def item_master_list():
 
 # ---------- Offices / Departments ----------
 
-@app.route('/offices')
-@app.route('/offices.php')
+@app.route('/offices', methods=['GET', 'POST'])
+@app.route('/offices.php', methods=['GET', 'POST'])
 @login_required
 def offices():
     """Manage offices/departments"""

@@ -374,6 +374,7 @@ function loadOfficeItems(officeId){
         .catch(e=>{
             document.getElementById('itemsTableBody').innerHTML=`<tr><td colspan="7" style="text-align:center;padding:20px;color:#dc3545;">Error: ${e.message}</td></tr>`;
         });
+}
 
 function applyDateFilter(){
     const fromDate = document.getElementById('filterFromDate').value;
@@ -397,6 +398,9 @@ function applyDateFilter(){
         document.getElementById('itemsTableBody').innerHTML=`<tr><td colspan="7" style="text-align:center;padding:20px;color:#999;">No items in date range</td></tr>`;
         return;
     }
+    
+    displayFilteredItems();
+}
 
 function clearDateFilter(){
     document.getElementById('filterFromDate').value='';
