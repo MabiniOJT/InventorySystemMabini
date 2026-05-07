@@ -417,6 +417,16 @@ def item_master_list():
             
             with conn.cursor() as cur:
                 if action == 'add':
+                    category_id = request.form.get('category_id') or None
+                    if category_id == 'custom':
+                        custom_category = request.form.get('custom_category', '').strip()
+                        cur.execute("INSERT INTO categories (category_name, status) VALUES (%s, 'Active')", (custom_category,))
+                        category_id = cur.lastrowid
+                    
+                    unit = request.form.get('unit', 'piece')
+                    if unit == 'custom':
+                        unit = request.form.get('custom_unit', '').strip()
+
                     cur.execute("""
                         INSERT INTO items
                         (item_code, item_name, category_id, unit, unit_cost,
@@ -425,8 +435,8 @@ def item_master_list():
                     """, (
                         request.form.get('item_code'),
                         request.form.get('item_name'),
-                        request.form.get('category_id') or None,
-                        request.form.get('unit', 'piece'),
+                        category_id,
+                        unit,
                         float(request.form.get('unit_cost', 0)),
                         int(request.form.get('quantity_on_hand', 0)),
                         int(request.form.get('reorder_level', 10)),
@@ -484,11 +494,11 @@ def item_master_list():
                 
                 # Get recent transactions for this item
                 cur.execute("""
-                    SELECT st.id, st.transaction_type, st.quantity, st.created_at,
-                           st.remarks, o1.office_name as from_office, o2.office_name as to_office
+                    SELECT st.id, st.movement_type as transaction_type, st.quantity, st.created_at,
+                           st.remarks, o.office_name as to_office, NULL as from_office
                     FROM stock_movements st
-                    LEFT JOIN offices o1 ON st.from_office_id = o1.id
-                    LEFT JOIN offices o2 ON st.to_office_id = o2.id
+                    LEFT JOIN inventory_transactions it ON st.transaction_id = it.id
+                    LEFT JOIN offices o ON it.office_id = o.id
                     WHERE st.item_id = %s
                     ORDER BY st.created_at DESC
                     LIMIT 10
