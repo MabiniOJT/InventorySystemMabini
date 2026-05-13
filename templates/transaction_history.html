@@ -55,7 +55,7 @@
             {% for trans in transactions %}
             <tr class="trans-type-{{ trans.transaction_type.lower() }}">
                 <td>
-                    <strong>{{ trans.reference_number }}</strong>
+                    <strong>{{ trans.transaction_number }}</strong>
                 </td>
                 <td>
                     {% if trans.transaction_type == 'ISSUE' %}

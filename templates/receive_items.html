@@ -62,7 +62,7 @@
 {% for receipt in receipts %}
 <div class="transaction-card">
     <div class="transaction-header">
-        <span class="transaction-ref">📦 {{ receipt.reference_number }}</span>
+        <span class="transaction-ref">📦 {{ receipt.transaction_number }}</span>
         <span class="cost-highlight">₱{{ receipt.total_cost|number_format(2) }}</span>
     </div>
     <div class="transaction-details">

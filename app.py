@@ -6,6 +6,7 @@ Quick transaction logging + live inventory tracking (no approvals needed)
 import os
 import random
 import json
+import time
 from datetime import datetime, date
 from functools import wraps
 
@@ -150,7 +151,7 @@ def dashboard():
             
             # Get recent transactions
             cur.execute("""
-                SELECT it.id, it.transaction_type, it.reference_number, it.quantity, 
+                SELECT it.id, it.transaction_type, it.transaction_number, it.quantity, 
                        i.item_name, u.full_name, it.created_at
                 FROM inventory_transactions it
                 JOIN items i ON it.item_id = i.id
@@ -264,15 +265,17 @@ def log_transaction():
                 if not item:
                     raise ValueError('Item not found')
                 
-                # Generate reference number
-                ref = f"{trans_type[:3]}-{datetime.now():%Y%m%d}-{random.randint(1000,9999)}"
+                # Generate unique reference number with timestamp and random
+                timestamp = int(time.time() * 1000) % 100000  # Last 5 digits of timestamp
+                unique_id = f"{timestamp}{random.randint(100,999)}"
+                ref = f"{trans_type[:3]}-{datetime.now():%Y%m%d}-{unique_id}"
                 
                 # Create transaction (IMMEDIATE - not pending)
                 cur.execute("""
                     INSERT INTO inventory_transactions
-                    (transaction_type, transaction_date, transaction_time, reference_number,
-                     office_id, item_id, quantity, unit_cost, total_cost, remarks, created_by)
-                    VALUES (%s, CURDATE(), CURTIME(), %s, %s, %s, %s, %s, %s, %s, %s)
+                    (transaction_type, transaction_number, transaction_date,
+                     office_id, item_id, quantity, unit_cost, total_cost, remarks, created_by, status)
+                    VALUES (%s, %s, CURDATE(), %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     trans_type,
                     ref,
@@ -282,7 +285,8 @@ def log_transaction():
                     item['unit_cost'],
                     quantity * float(item['unit_cost']),
                     remarks,
-                    user_id
+                    user_id,
+                    'Completed'
                 ))
                 txn_id = cur.lastrowid
                 
@@ -318,16 +322,15 @@ def log_transaction():
                 cur.execute("""
                     INSERT INTO stock_movements
                     (item_id, transaction_id, movement_type, quantity, balance_after,
-                     from_office_id, to_office_id, remarks, created_by)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     reference, remarks, created_by)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     item_id,
                     txn_id,
                     movement_type,
                     quantity,
                     new_balance,
-                    office_id if trans_type == 'ISSUE' else None,
-                    office_id if trans_type in ['RECEIVE', 'RETURN'] else None,
+                    ref,
                     remarks,
                     user_id
                 ))
@@ -358,6 +361,132 @@ def log_transaction():
     return render_template('log_transaction.html', items=items, offices=offices)
 
 
+# ---------- Issue Items Management ----------
+
+@app.route('/issue-items', methods=['GET', 'POST'])
+@login_required
+def issue_items():
+    """Dedicated page for issuing items to offices"""
+    conn = get_db()
+    
+    if request.method == 'POST':
+        try:
+            item_id = int(request.form.get('item_id', 0))
+            quantity = int(request.form.get('quantity_requested', 0))
+            office_id = request.form.get('office_id') or None
+            remarks = request.form.get('remarks', '').strip()
+            
+            if not item_id or quantity <= 0:
+                raise ValueError('Invalid item or quantity')
+            if not office_id:
+                raise ValueError('Please select an office')
+            
+            user_id = session.get('user_id')
+            
+            with conn.cursor() as cur:
+                # Get item details
+                cur.execute(
+                    "SELECT id, item_code, item_name, quantity_on_hand, unit_cost FROM items WHERE id=%s",
+                    (item_id,)
+                )
+                item = cur.fetchone()
+                if not item:
+                    raise ValueError('Item not found')
+                
+                if item['quantity_on_hand'] < quantity:
+                    raise ValueError(f"Insufficient stock. Available: {item['quantity_on_hand']}")
+                
+                # Generate unique reference number with timestamp and random
+                timestamp = int(time.time() * 1000) % 100000  # Last 5 digits of timestamp
+                unique_id = f"{timestamp}{random.randint(100,999)}"
+                ref = f"ISS-{datetime.now():%Y%m%d}-{unique_id}"
+                
+                # Create ISSUE transaction (immediate)
+                cur.execute("""
+                    INSERT INTO inventory_transactions
+                    (transaction_type, transaction_number, transaction_date,
+                     office_id, item_id, quantity, unit_cost, total_cost, remarks, created_by, status)
+                    VALUES (%s, %s, CURDATE(), %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    'ISSUE',
+                    ref,
+                    office_id,
+                    item_id,
+                    quantity,
+                    item['unit_cost'],
+                    quantity * float(item['unit_cost']),
+                    remarks,
+                    user_id,
+                    'Completed'
+                ))
+                txn_id = cur.lastrowid
+                
+                # Update inventory
+                cur.execute("UPDATE items SET quantity_on_hand = quantity_on_hand - %s, updated_at = NOW() WHERE id = %s",
+                           (quantity, item_id))
+                
+                # Get new balance
+                cur.execute("SELECT quantity_on_hand FROM items WHERE id = %s", (item_id,))
+                new_balance = cur.fetchone()['quantity_on_hand']
+                
+                # Log stock movement
+                cur.execute("""
+                    INSERT INTO stock_movements
+                    (item_id, transaction_id, movement_type, quantity, balance_after,
+                     reference, remarks, created_by)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    item_id,
+                    txn_id,
+                    'OUT',
+                    quantity,
+                    new_balance,
+                    ref,
+                    remarks,
+                    user_id
+                ))
+            
+            conn.commit()
+            flash(f"✓ Items issued successfully! Reference: {ref}", 'success')
+            return redirect(url_for('issue_items'))
+        
+        except ValueError as e:
+            flash(f"Validation error: {str(e)}", 'error')
+        except Exception as e:
+            conn.rollback()
+            flash(f"Error issuing items: {str(e)}", 'error')
+    
+    # GET - show form and recent issues
+    try:
+        with conn.cursor() as cur:
+            # Get active items
+            cur.execute("SELECT id, item_code, item_name, quantity_on_hand FROM items WHERE status='Active' ORDER BY item_name")
+            items = cur.fetchall()
+            
+            # Get active offices
+            cur.execute("SELECT id, office_name FROM offices WHERE status='Active' ORDER BY office_name")
+            offices = cur.fetchall()
+            
+            # Get recent ISSUE transactions
+            cur.execute("""
+                SELECT it.id, it.transaction_number, it.transaction_date, it.quantity,
+                       i.item_code, i.item_name, o.office_name, u.full_name as issued_by,
+                       it.remarks, it.created_at, it.status, it.processed_by
+                FROM inventory_transactions it
+                JOIN items i ON it.item_id = i.id
+                LEFT JOIN offices o ON it.office_id = o.id
+                JOIN users u ON it.created_by = u.id
+                WHERE it.transaction_type = 'ISSUE'
+                ORDER BY it.created_at DESC LIMIT 20
+            """)
+            transactions = cur.fetchall()
+    finally:
+        conn.close()
+    
+    return render_template('issue_items.html', items=items, offices=offices, transactions=transactions,
+                          pending_count=0, completed_today=0)
+
+
 # ---------- Transaction History / Audit Log ----------
 
 @app.route('/transaction-history')
@@ -373,7 +502,7 @@ def transaction_history():
         
         with conn.cursor() as cur:
             query = """
-                SELECT it.id, it.transaction_type, it.reference_number, it.transaction_date,
+                SELECT it.id, it.transaction_type, it.transaction_number, it.transaction_date,
                        it.quantity, i.item_code, i.item_name, o.office_name, u.full_name as logged_by,
                        it.remarks, sm.balance_after as new_balance, it.created_at
                 FROM inventory_transactions it
